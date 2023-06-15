@@ -4,12 +4,9 @@ from PIL import Image, ExifTags
 import logging
 from string import Template
 
-DEFAULT_STYLE = """
-——————————
-Camera: $camera
-Lens: $lens
-$focal_length, $aperture, $shutter_speed, $iso, $exposure_compensation
-"""
+from src.exifutils.styles import (
+    DEFAULT_STYLE
+)
 
 
 class ExifWorker:
@@ -141,7 +138,7 @@ class ExifWorker:
             logging.warning("No exposure compensation found")
             return ""
         else:
-            return f"{self.float2frac(float(self.exif[ExifTags.Base.ExposureBiasValue]))} EV"
+            return f"{float(self.exif[ExifTags.Base.ExposureBiasValue]):.2f} EV"
 
     def get_datetime(self) -> str:
         if ExifTags.Base.DateTimeOriginal not in self.exif:
