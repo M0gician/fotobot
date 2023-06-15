@@ -3,6 +3,7 @@ from fractions import Fraction
 from PIL import Image, ExifTags
 import logging
 from string import Template
+from enum import IntEnum
 
 from src.exifutils.styles import (
     DEFAULT_STYLE
@@ -31,18 +32,16 @@ class ExifWorker:
     def __init__(self, img: Image) -> None:
         self.img = img
         self.exif = {**img.getexif(), **img.getexif().get_ifd(ExifTags.Base.ExifOffset)}
+    
+    def get_tag_with_log(self, tag: IntEnum) -> str:
+        tag_info = self.exif.get(tag, '')
+        if tag_info == '':
+            logging.warning(f"No {tag.name} found")
+        return tag_info
 
     def get_camera(self) -> str:
-        cam_make, cam_model = "", ""
-        if ExifTags.Base.Make not in self.exif:
-            logging.warning("No camera make found")
-        else:
-            cam_make = self.exif[ExifTags.Base.Make].lower()
-
-        if ExifTags.Base.Model not in self.exif:
-            logging.warning("No camera model found")
-        else:
-            cam_model = self.exif[ExifTags.Base.Model]
+        cam_make = self.get_tag_with_log(ExifTags.Base.Make).lower()
+        cam_model = self.get_tag_with_log(ExifTags.Base.Model)
 
         if cam_make.startswith("nikon"):
             subtype = cam_model
@@ -63,27 +62,24 @@ class ExifWorker:
             return f"Fujifilm {cam_model}"
         else:
             logging.warning("Unknown camera make, return as is")
-            return f"{cam_make} {cam_model}"
+            if cam_make or cam_model:
+                cam_make = cam_make if cam_make else "Unknown Make"
+                cam_model = cam_model if cam_model else "Unknown Model"
+                return f"{cam_make} {cam_model}"
+            else:
+                return "Unknown Camera"
 
     def get_lens(self) -> str:
-        lens_make, lens_model = "", ""
-        if ExifTags.Base.LensMake not in self.exif:
-            logging.warning("No lens make found")
-        else:
-            lens_make = self.exif[ExifTags.Base.LensMake].lower()
-
-        if ExifTags.Base.LensModel not in self.exif:
-            logging.warning("No lens model found")
-        else:
-            lens_model = self.exif[ExifTags.Base.LensModel]
-
+        lens_make = self.get_tag_with_log(ExifTags.Base.LensMake)
+        lens_model = self.get_tag_with_log(ExifTags.Base.LensModel)
+    
         if lens_make.startswith("nikon"):
-            subtype = lens_model
+            lens = lens_model
             if lens_model.startswith("NIKKOR"):
-                subtype = lens_model[7:]
+                lens = lens_model[7:]
                 # Replace Z with DOUBLE-STRUCK CAPITAL Z
-                subtype = f"\u2124{subtype[1:]}" if subtype[0] == 'Z' else subtype
-            return f"Nikkor {subtype}"
+                lens = f"\u2124{lens[1:]}" if lens[0] == 'Z' else lens
+            return f"Nikkor {lens}"
         elif lens_make.startswith("sony") or lens_model[:2] in ('FE', 'E '):
             return f"Sony {lens_model}"
         elif lens_make.startswith("canon") or lens_model[:2] in ('EF', 'RF'):
@@ -103,49 +99,36 @@ class ExifWorker:
             return f"Fujinon {lens_model}"
         else:
             logging.warning("Unknown lens make, return as is")
-            return f"{lens_make} {lens_model}"
+            if lens_make or lens_model:
+                lens_make = lens_make if lens_make else "Unknown Make"
+                lens_model = lens_model if lens_model else "Unknown Model"
+                return f"{lens_make} {lens_model}"
+            else:
+                return "Unknown Lens"
 
     def get_focal_length(self) -> str:
-        if ExifTags.Base.FocalLength not in self.exif:
-            logging.warning("No focal length found")
-            return ""
-        else:
-            return f"{int(float(self.exif[ExifTags.Base.FocalLength]))}mm"
+        focal_length = self.get_tag_with_log(ExifTags.Base.FocalLength)
+        return f"{int(float(focal_length))}mm" if focal_length != "" else ""
 
     def get_aperture(self) -> str:
-        if ExifTags.Base.FNumber not in self.exif:
-            logging.warning("No f-number found")
-            return ""
-        else:
-            return f"f/{self.exif[ExifTags.Base.FNumber]}"
+        aperture = self.get_tag_with_log(ExifTags.Base.FNumber)
+        return f"f/{aperture}" if aperture else ""
 
     def get_shutter_speed(self) -> str:
-        if ExifTags.Base.ExposureTime not in self.exif:
-            logging.warning("No shutter speed found")
-            return ""
-        else:
-            return f"{self.float2frac(float(self.exif[ExifTags.Base.ExposureTime]))}s"
+        shutter_speed = self.get_tag_with_log(ExifTags.Base.ExposureTime)
+        return f"{self.float2frac(float(shutter_speed))}s" if shutter_speed != "" else ""
 
     def get_iso(self) -> str:
-        if ExifTags.Base.ISOSpeedRatings not in self.exif:
-            logging.warning("No ISO found")
-            return ""
-        else:
-            return f"ISO {self.exif[ExifTags.Base.ISOSpeedRatings]}"
+        iso = self.get_tag_with_log(ExifTags.Base.ISOSpeedRatings)
+        return f"ISO {iso}" if iso != "" else ""
 
     def get_exposure_compenstation(self) -> str:
-        if ExifTags.Base.ExposureBiasValue not in self.exif:
-            logging.warning("No exposure compensation found")
-            return ""
-        else:
-            return f"{float(self.exif[ExifTags.Base.ExposureBiasValue]):.2f} EV"
+        exposure_comp = self.get_tag_with_log(ExifTags.Base.ExposureBiasValue)
+        return f"{float(exposure_comp):.2f} EV" if exposure_comp != "" else ""
 
     def get_datetime(self) -> str:
-        if ExifTags.Base.DateTimeOriginal not in self.exif:
-            logging.warning("No datetime found")
-            return ""
-        else:
-            return self.exif[ExifTags.Base.DateTimeOriginal]
+        date_time = self.get_tag_with_log(ExifTags.Base.DateTimeOriginal)
+        return date_time if date_time != "" else ""
 
     def get_description(self, style=DEFAULT_STYLE) -> str:
         mapping = {
@@ -158,7 +141,7 @@ class ExifWorker:
             'exposure_compensation': self.get_exposure_compenstation(),
             'datetime': self.get_datetime()
         }
-
+        
         try:
             template = Template(style)
             return template.safe_substitute(mapping)
