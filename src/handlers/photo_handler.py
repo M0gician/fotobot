@@ -16,14 +16,20 @@ from src.handlers.helper import remove_original_doc_from_server
 SUPPORTED_MIME_LIST = ("image/jpeg", "image/png")
 
 
-async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> str:
+async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> None:
     logger = getLogger()
 
     logger.info("photo_handler started")
     user = update.message.from_user
     photo_path = f"{PHOTO_PATH}/{uuid.uuid4()}_img"
-    photo_file = await update.message.effective_attachment.get_file()
-    await photo_file.download_to_drive(photo_path)
+    try:
+        photo_file = await update.message.effective_attachment.get_file()
+        await photo_file.download_to_drive(photo_path)
+    except Exception as e:
+        logger.error("Cannot download file!")
+        logger.error(e.args)
+        await update.message.reply_text("Cannot download file! (Max File Size: 20MB) Please try again.")
+        return
     logger.info(f"Download completed from user {user.full_name}")
 
     logger.info("Guessing file type")
@@ -72,3 +78,4 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
             remove_original_doc_from_server(photo_path, logger)
 
     await update.message.reply_text(description, parse_mode=constants.ParseMode.MARKDOWN_V2)
+    return
