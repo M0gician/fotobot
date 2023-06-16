@@ -43,36 +43,42 @@ STYLE, DEFAULT, FULL, PRETTY = range(4)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Send a message when the command /start is issued."""
 
-    start_text = """
-    Pick an output format you want to use :\\)
-    
-    *Default* :
+    style_default = """
+    Default
+
     ——————————
     Camera: Nikon ℤ 8
-    Lens: Nikkor ℤ 50mm f/1\\.8 S
-    50\\.0 mm, f/2\\.8, 1/250s, ISO 64
+    Lens: Nikkor ℤ 50mm f/1.8 S
+    50.0 mm, f/2.8, 1/250s, ISO 64
+    """
 
-    *Full* :
-    Make: NIKON CORPORATION
-    Model: NIKON D850
-    ISO: 64
-    ExposureTime: 1/200
-    FNumber: 2\\.0
-    FocalLength: 105 mm
-    DateTimeOriginal: 2017:10:10 12:02:59
+    style_full = """
+    Full   
 
-    *Pretty* :
+    Camera: Canon EOS R5
+    Lens: Canon RF 35mm F1.8 MACRO IS STM
+    Focal Length: 35.0 mm
+    Aperture: f/11.0
+    Shutter Speed: 1/125s
+    ISO: ISO 200
+    Exposure Compensation: -2/3 EV
+    DateTime Original: 2020:07:19 12:18:02
+    """
+
+    style_pretty = """
+    Pretty 
+
     💭:
     ——————————
-    📸: NIKON Z fc / 23mm f/1\\.2
-    📝: 23\\.0 mm, f/7\\.1, 1/400s, ISO 100
+    📸: NIKON Z fc / 23mm f/1.2
+    📝: 23.0 mm, f/7.1, 1/400s, ISO 100
     📅: 2022:07:23 16:37:51
     """
-    start_text = textwrap.dedent(start_text)
-    reply_keyboard = [["Default", "Full", "Pretty"]]
+    
+    reply_keyboard = [[textwrap.dedent(style_default), textwrap.dedent(style_full), textwrap.dedent(style_pretty)]]
 
     await update.message.reply_text(
-        start_text,
+        "Pick an output format you want to use :\\)",
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True, input_field_placeholder="Which format?"
         ),
@@ -81,7 +87,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return STYLE
 
 async def style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    style = update.message.text
+    style = update.message.text[:8].strip()
     await update.message.reply_text(
         "I see\\! Please send me a photo of `\\.jpg/\\.png` as file",
         reply_markup=ReplyKeyboardRemove(),
@@ -116,7 +122,7 @@ if __name__ == "__main__":
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.ALL, start)],
         states={
-            STYLE: [MessageHandler(filters.Regex("^(Default|Full|Pretty)$"), style)],
+            STYLE: [MessageHandler(filters.Regex("^(Default|Full|Pretty)"), style)],
             DEFAULT: [MessageHandler(filters.Document.IMAGE, default)],
             FULL: [MessageHandler(filters.Document.IMAGE, full)],
             PRETTY: [MessageHandler(filters.Document.IMAGE, pretty)],
