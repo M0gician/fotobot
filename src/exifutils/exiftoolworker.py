@@ -91,7 +91,7 @@ class ExifToolWorker:
             return "Unknown Lens"
     
     def get_focal_length(self) -> str:
-        focal_length = self.get_tag_with_log("FocalLength")
+        focal_length = self.get_tag_with_log("FocalLength").replace('.0', '', 1)
         return focal_length if focal_length else "Unknown Focal Length"
     
     def get_focal_length_35mm(self) -> str:
@@ -132,7 +132,7 @@ class ExifToolWorker:
         
         try:
             template = Template(style)
-            return template.safe_substitute(mapping)
+            return template.safe_substitute(mapping).replace('.', r'\.')
         except KeyError as e:
             logging.error(f"Invalid style: {e}")
             return ""
