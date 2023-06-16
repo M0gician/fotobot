@@ -114,7 +114,7 @@ if __name__ == "__main__":
     application = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(filters.TEXT, start)],
+        entry_points=[MessageHandler(filters.ALL, start)],
         states={
             STYLE: [MessageHandler(filters.Regex("^(Default|Full|Pretty)$"), style)],
             DEFAULT: [MessageHandler(filters.Document.IMAGE, default)],

@@ -4,7 +4,7 @@ from os import remove
 import magic
 import uuid
 from PIL import Image
-from telegram import Update
+from telegram import Update, constants
 from telegram.ext import ContextTypes
 from config import PHOTO_PATH
 
@@ -71,4 +71,4 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
             description = "Cannot parse EXIF data!"
             remove_original_doc_from_server(photo_path, logger)
 
-    await update.message.reply_text(description)
+    await update.message.reply_text(description, parse_mode=constants.ParseMode.MARKDOWN_V2)

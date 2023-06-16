@@ -14,6 +14,7 @@ $focal_length, $aperture, $shutter_speed, $iso
 """
 
 FULL_INFO_STYLE = """
+```
 Camera               : $camera
 Lens                 : $lens
 Focal Length         : $focal_length
@@ -22,6 +23,7 @@ Shutter Speed        : $shutter_speed
 ISO                  : $iso
 Exposure Compensation: $exposure_compensation
 DateTime Original    : $datetime
+```
 """
 
 PRETTY_STYLE = """
