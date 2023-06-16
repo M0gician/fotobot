@@ -29,9 +29,10 @@ class ExifWorker:
         numerator, denominator = frac.numerator, frac.denominator
         return f"{numerator}/{denominator}" if numerator != 0 else "0"
 
-    def __init__(self, img: Image) -> None:
-        self.img = img
-        self.exif = {**img.getexif(), **img.getexif().get_ifd(ExifTags.Base.ExifOffset)}
+    def __init__(self, img_path: str) -> None:
+        with Image.open(img_path) as img:
+            self.img = img
+            self.exif = {**img.getexif(), **img.getexif().get_ifd(ExifTags.Base.ExifOffset)}
     
     def get_tag_with_log(self, tag: IntEnum) -> str:
         tag_info = self.exif.get(tag, '')

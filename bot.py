@@ -44,29 +44,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Send a message when the command /start is issued."""
 
     start_text = """
-        Pick an output format you want to use :\\)
-        
-        \\*\\*Default\\*\\*:
-        ——————————
-        Camera: Nikon ℤ 8
-        Lens: Nikkor ℤ 50mm f/1\\.8 S
-        50\\.0 mm, f/2\\.8, 1/250s, ISO 64
+    Pick an output format you want to use :\\)
+    
+    *Default* :
+    ——————————
+    Camera: Nikon ℤ 8
+    Lens: Nikkor ℤ 50mm f/1\\.8 S
+    50\\.0 mm, f/2\\.8, 1/250s, ISO 64
 
-        \\*\\*Full\\*\\*:
-        Make: NIKON CORPORATION
-        Model: NIKON D850
-        ISO: 64
-        ExposureTime: 1/200
-        FNumber: 2\\.0
-        FocalLength: 105\\.0 mm
-        DateTimeOriginal: 2017:10:10 12:02:59
+    *Full* :
+    Make: NIKON CORPORATION
+    Model: NIKON D850
+    ISO: 64
+    ExposureTime: 1/200
+    FNumber: 2\\.0
+    FocalLength: 105 mm
+    DateTimeOriginal: 2017:10:10 12:02:59
 
-        \\*\\*Pretty\\*\\*:
-        💭:
-        ——————————
-        📸: NIKON CORPORATION NIKON Z fc / 23mm f/1\\.2
-        📝: 23\\.0 mm, f/7\\.1, 1/400s, ISO 100
-        📅: 2022:07:23 16:37:51
+    *Pretty* :
+    💭:
+    ——————————
+    📸: NIKON Z fc / 23mm f/1\\.2
+    📝: 23\\.0 mm, f/7\\.1, 1/400s, ISO 100
+    📅: 2022:07:23 16:37:51
     """
     start_text = textwrap.dedent(start_text)
     reply_keyboard = [["Default", "Full", "Pretty"]]
@@ -121,7 +121,7 @@ if __name__ == "__main__":
             FULL: [MessageHandler(filters.Document.IMAGE, full)],
             PRETTY: [MessageHandler(filters.Document.IMAGE, pretty)],
         },
-        fallbacks=[CommandHandler("start", start)],
+        fallbacks=[MessageHandler(filters.TEXT, start)],
     )
     application.add_handler(conv_handler)
 

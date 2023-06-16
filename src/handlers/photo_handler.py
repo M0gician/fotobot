@@ -8,6 +8,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from config import PHOTO_PATH
 
+from src.exifutils.exiftoolworker import ExifToolWorker
 from src.exifutils.exifworker import ExifWorker
 from src.exifutils.styles import Style, DEFAULT_STYLE, FULL_INFO_STYLE, PRETTY_STYLE
 from src.handlers.helper import remove_original_doc_from_server
@@ -55,14 +56,14 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
     else:
         logger.info("Parsing EXIF data...")
         try:
-            with Image.open(photo_path) as img:
-                worker = ExifWorker(img)
-                output_style = DEFAULT_STYLE
-                if style == Style.FULL:
-                    output_style = FULL_INFO_STYLE
-                elif style == Style.PRETTY:
-                    output_style = PRETTY_STYLE
-                description = worker.get_description(output_style)
+            worker = ExifWorker(photo_path)
+            output_style = DEFAULT_STYLE
+            if style == Style.FULL.value:
+                output_style = FULL_INFO_STYLE
+            elif style == Style.PRETTY.value:
+                output_style = PRETTY_STYLE
+            logger.info(f"Output Style {Style(style).name}...")
+            description = worker.get_description(output_style)
             remove_original_doc_from_server(photo_path, logger)
         except Exception as e:
             logger.error("Cannot parse EXIF data!")
