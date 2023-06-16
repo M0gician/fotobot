@@ -132,7 +132,11 @@ class ExifToolWorker:
         
         try:
             template = Template(style)
-            return template.safe_substitute(mapping).replace('.', r'\.')
+            description = template.safe_substitute(mapping)
+            description = description.replace('.', r'\.').replace('-', r'\-')
+            description = description.replace('_', r'\_').replace('*', r'\*')
+            description = description.replace('[', r'\[').replace('`', r'\`')
+            return description
         except KeyError as e:
             logging.error(f"Invalid style: {e}")
             return ""
