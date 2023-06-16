@@ -112,7 +112,7 @@ class ExifToolWorker:
     
     def get_exposure_compensation(self) -> str:
         exposure_compensation = self.get_tag_with_log("ExposureCompensation")
-        return exposure_compensation
+        return f"{exposure_compensation} EV" if exposure_compensation else ""
     
     def get_datetime(self) -> str:
         datetime = self.get_tag_with_log("DateTimeOriginal")
