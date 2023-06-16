@@ -6,19 +6,21 @@ import uuid
 from PIL import Image
 from telegram import Update
 from telegram.ext import ContextTypes
+from config import PHOTO_PATH
 
 from src.exifutils.exifworker import ExifWorker
+from src.exifutils.styles import Style, DEFAULT_STYLE, FULL_INFO_STYLE, PRETTY_STYLE
 from src.handlers.helper import remove_original_doc_from_server
 
 SUPPORTED_MIME_LIST = ("image/jpeg", "image/png")
 
 
-async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> str:
     logger = getLogger()
 
     logger.info("photo_handler started")
     user = update.message.from_user
-    photo_path = f"tmp/{uuid.uuid4()}_img"
+    photo_path = f"{PHOTO_PATH}/{uuid.uuid4()}_img"
     photo_file = await update.message.effective_attachment.get_file()
     await photo_file.download_to_drive(photo_path)
     logger.info(f"Download completed from user {user.full_name}")
@@ -55,7 +57,12 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> s
         try:
             with Image.open(photo_path) as img:
                 worker = ExifWorker(img)
-                description = worker.get_description()
+                output_style = DEFAULT_STYLE
+                if style == Style.FULL:
+                    output_style = FULL_INFO_STYLE
+                elif style == Style.PRETTY:
+                    output_style = PRETTY_STYLE
+                description = worker.get_description(output_style)
             remove_original_doc_from_server(photo_path, logger)
         except Exception as e:
             logger.error("Cannot parse EXIF data!")

@@ -122,7 +122,7 @@ class ExifWorker:
         iso = self.get_tag_with_log(ExifTags.Base.ISOSpeedRatings)
         return f"ISO {iso}" if iso != "" else ""
 
-    def get_exposure_compenstation(self) -> str:
+    def get_exposure_compensation(self) -> str:
         exposure_comp = self.get_tag_with_log(ExifTags.Base.ExposureBiasValue)
         return f"{float(exposure_comp):.2f} EV" if exposure_comp != "" else ""
 
@@ -138,7 +138,7 @@ class ExifWorker:
             'aperture': self.get_aperture(),
             'shutter_speed': self.get_shutter_speed(),
             'iso': self.get_iso(),
-            'exposure_compensation': self.get_exposure_compenstation(),
+            'exposure_compensation': self.get_exposure_compensation(),
             'datetime': self.get_datetime()
         }
         
