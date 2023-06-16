@@ -56,7 +56,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
     else:
         logger.info("Parsing EXIF data...")
         try:
-            worker = ExifWorker(photo_path)
+            worker = ExifToolWorker(photo_path)
             output_style = DEFAULT_STYLE
             if style == Style.FULL.value:
                 output_style = FULL_INFO_STYLE
