@@ -1,12 +1,9 @@
 import logging
 import exiftool
-from string import Template
+import math
+from src.exifutils.exifworker import ExifWorker
 
-from src.exifutils.styles import (
-    DEFAULT_STYLE
-)
-
-class ExifToolWorker:
+class ExifToolWorker(ExifWorker):
     def __init__(self, img_path: str) -> None:
         self.img_path = img_path
         with exiftool.ExifToolHelper(common_args=None) as et:
@@ -94,8 +91,10 @@ class ExifToolWorker:
         focal_length = self.get_tag_with_log("FocalLength").replace('.0', '', 1)
         return focal_length if focal_length else "Unknown Focal Length"
     
-    def get_focal_length_35mm(self) -> str:
-        focal_length_35mm = self.get_tag_with_log("FocalLengthIn35mmFormat")
+    def get_focal_length_in_35mm(self) -> str:
+        focal_length_35mm = self.get_tag_with_log("FocalLengthIn35mmFormat").replace('.0', '', 1)
+        if not focal_length_35mm:
+            focal_length_35mm = self.get_tag_with_log("FocalLength35efl").replace('.0', '', 1)
         return focal_length_35mm if focal_length_35mm else "Unknown Focal Length in 35mm format"
     
     def get_aperture(self) -> str:
@@ -117,26 +116,3 @@ class ExifToolWorker:
     def get_datetime(self) -> str:
         datetime = self.get_tag_with_log("DateTimeOriginal")
         return datetime if datetime else "Unknown DateTime Original"
-
-    def get_description(self, style=DEFAULT_STYLE) -> str:
-        mapping = {
-            'camera': self.get_camera(),
-            'lens': self.get_lens(),
-            'focal_length': self.get_focal_length(),
-            'aperture': self.get_aperture(),
-            'shutter_speed': self.get_shutter_speed(),
-            'iso': self.get_iso(),
-            'exposure_compensation': self.get_exposure_compensation(),
-            'datetime': self.get_datetime()
-        }
-        
-        try:
-            template = Template(style)
-            description = template.safe_substitute(mapping)
-            description = description.replace('.', r'\.').replace('-', r'\-')
-            description = description.replace('_', r'\_').replace('*', r'\*')
-            description = description.replace('[', r'\[').replace('`', r'\`')
-            return description
-        except KeyError as e:
-            logging.error(f"Invalid style: {e}")
-            return ""
