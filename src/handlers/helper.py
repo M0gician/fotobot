@@ -13,3 +13,10 @@ def remove_original_doc_from_server(photo_path, logger):
     except Exception as e:
         logger.error("Can't remove original file")
         logger.error(e.args)
+
+def escape(text: str) -> str:
+    """Escape string to avoid explosion"""
+    try:
+        return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    except AttributeError:
+        return 'N/A'

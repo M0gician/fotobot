@@ -1,6 +1,7 @@
 import logging
 import textwrap
 from telegram import __version__ as TG_VER
+from src.handlers.helper import escape
 
 try:
     from telegram import __version_info__
@@ -75,23 +76,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     📅: 2022:07:23 16:37:51
     """
     
-    reply_keyboard = [[textwrap.dedent(style_default), textwrap.dedent(style_full), textwrap.dedent(style_pretty)]]
+    reply_keyboard = [[
+        escape(textwrap.dedent(style_default)), 
+        escape(textwrap.dedent(style_full)), 
+        escape(textwrap.dedent(style_pretty))
+    ]]
 
     await update.message.reply_text(
-        "Pick an output format you want to use :\\)",
+        escape("Pick an output format you want to use :)"),
         reply_markup=ReplyKeyboardMarkup(
             reply_keyboard, one_time_keyboard=True, input_field_placeholder="Which format?"
         ),
-        parse_mode=constants.ParseMode.MARKDOWN_V2
+        parse_mode=constants.ParseMode.HTML
     )
     return STYLE
 
 async def style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     style = update.message.text[:8].strip()
     await update.message.reply_text(
-        "I see\\! Please send me a photo of `\\.jpg/\\.png` as file",
+        "I see! Please send me a photo of <code>.jpg/.png</code> as file",
         reply_markup=ReplyKeyboardRemove(),
-        parse_mode=constants.ParseMode.MARKDOWN_V2
+        parse_mode=constants.ParseMode.HTML
     )
     if style == 'Default':
         return DEFAULT
