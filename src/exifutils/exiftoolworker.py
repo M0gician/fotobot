@@ -92,31 +92,31 @@ class ExifToolWorker:
     
     def get_focal_length(self) -> str:
         focal_length = self.get_tag_with_log("FocalLength")
-        return focal_length
+        return focal_length if focal_length else "Unknown Focal Length"
     
     def get_focal_length_35mm(self) -> str:
         focal_length_35mm = self.get_tag_with_log("FocalLengthIn35mmFormat")
-        return focal_length_35mm
+        return focal_length_35mm if focal_length_35mm else "Unknown Focal Length in 35mm format"
     
     def get_aperture(self) -> str:
         aperture = self.get_tag_with_log("Aperture")
-        return f"f/{aperture}" if aperture else ""
+        return f"f/{aperture}" if aperture else "Unknown Aperture"
     
     def get_shutter_speed(self) -> str:
         shutter_speed = self.get_tag_with_log("ShutterSpeed")
-        return f"{shutter_speed}s" if shutter_speed else ""
+        return f"{shutter_speed}s" if shutter_speed else "Unknown Shutter Speed"
     
     def get_iso(self) -> str:
         iso = self.get_tag_with_log("ISO")
-        return f"ISO {iso}" if iso else ""
+        return f"ISO {iso}" if iso else "Unknown ISO"
     
     def get_exposure_compensation(self) -> str:
         exposure_compensation = self.get_tag_with_log("ExposureCompensation")
-        return f"{exposure_compensation} EV" if exposure_compensation else ""
+        return f"{exposure_compensation} EV" if exposure_compensation else "Unknown Exposure Compensation"
     
     def get_datetime(self) -> str:
         datetime = self.get_tag_with_log("DateTimeOriginal")
-        return datetime
+        return datetime if datetime else "Unknown DateTime Original"
 
     def get_description(self, style=DEFAULT_STYLE) -> str:
         mapping = {
