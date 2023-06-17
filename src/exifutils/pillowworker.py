@@ -45,6 +45,7 @@ class PillowWorker(ExifWorker):
                 subtype = cam_model[6:]
                 # Replace Z with DOUBLE-STRUCK CAPITAL Z
                 subtype = f"\u2124{subtype[1:]}" if subtype[0] == 'Z' else subtype
+                subtype = subtype.replace('_2', ' II', 1)
             return f"Nikon {subtype}"
         elif cam_make.startswith("sony"):
             subtype = cam_model
@@ -53,6 +54,8 @@ class PillowWorker(ExifWorker):
             # Add alpha symbol to Sony Models
             return f"Sony \u03B1{subtype}"
         elif cam_make.startswith("canon"):
+            if cam_model[-2:] == "m2":
+                cam_model = cam_model[:-2] + ' Mark II'
             return cam_model
         elif cam_make.startswith("fujifilm"):
             return f"Fujifilm {cam_model}"
@@ -66,7 +69,7 @@ class PillowWorker(ExifWorker):
                 return "Unknown Camera"
 
     def get_lens(self) -> str:
-        lens_make = self.get_tag_with_log(ExifTags.Base.LensMake)
+        lens_make = self.get_tag_with_log(ExifTags.Base.LensMake).lower()
         lens_model = self.get_tag_with_log(ExifTags.Base.LensModel)
     
         if lens_make.startswith("nikon"):

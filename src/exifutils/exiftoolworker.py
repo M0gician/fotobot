@@ -30,6 +30,7 @@ class ExifToolWorker(ExifWorker):
                 subtype = cam_model[6:]
                 # Replace Z with DOUBLE-STRUCK CAPITAL Z
                 subtype = f"\u2124{subtype[1:]}" if subtype[0] == 'Z' else subtype
+                subtype = subtype.replace('_2', ' II', 1)
             return f"Nikon {subtype}"
         elif cam_make.startswith("sony"):
             subtype = cam_model
@@ -38,6 +39,8 @@ class ExifToolWorker(ExifWorker):
             # Add alpha symbol to Sony Models
             return f"Sony \u03B1{subtype}"
         elif cam_make.startswith("canon"):
+            if cam_model[-2:] == "m2":
+                cam_model = cam_model[:-2] + ' Mark II'
             return cam_model
         elif cam_make.startswith("fujifilm"):
             return f"Fujifilm {cam_model}"
