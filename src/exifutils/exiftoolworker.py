@@ -1,6 +1,7 @@
 import logging
 import exiftool
 import math
+from datetime import datetime
 from src.exifutils.exifworker import ExifWorker
 
 class ExifToolWorker(ExifWorker):
@@ -117,5 +118,8 @@ class ExifToolWorker(ExifWorker):
         return f"{exposure_compensation} EV" if exposure_compensation else "Unknown Exposure Compensation"
     
     def get_datetime(self) -> str:
-        datetime = self.get_tag_with_log("DateTimeOriginal")
-        return datetime if datetime else "Unknown DateTime Original"
+        date_time = self.get_tag_with_log("DateTimeOriginal")
+        if date_time:
+            date_time_obj = datetime.strptime(date_time, '%Y:%m:%d %H:%M:%S')
+            return str(date_time_obj)
+        return "Unknown DateTime Original"

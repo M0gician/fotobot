@@ -2,6 +2,7 @@ import math
 from fractions import Fraction
 from PIL import Image, ExifTags
 import logging
+from datetime import datetime
 from enum import IntEnum
 from src.exifutils.exifworker import ExifWorker
 
@@ -9,6 +10,9 @@ class PillowWorker(ExifWorker):
 
     @staticmethod
     def float2frac(f_value: float) -> str:
+        if f_value >= 1.0:
+            return str(f_value)
+        
         if math.isclose(f_value, 0.0):
             return "0"
         elif math.isclose(f_value, 0.33):
@@ -131,4 +135,7 @@ class PillowWorker(ExifWorker):
 
     def get_datetime(self) -> str:
         date_time = self.get_tag_with_log(ExifTags.Base.DateTimeOriginal)
-        return date_time if date_time != "" else "Unknown DateTime Original"
+        if date_time:
+            date_time_obj = datetime.strptime(date_time, '%Y:%m:%d %H:%M:%S')
+            return str(date_time_obj)
+        return "Unknown DateTime Original"
