@@ -22,15 +22,24 @@ $focal_length, $aperture, $shutter_speed, $iso
 """
 
 FULL_INFO_STYLE = """<pre>
-Camera                : $camera
-Lens                  : $lens
-Focal Length          : $focal_length
-Focal Length in 35mm  : $focal_length_in_35mm
-Aperture              : $aperture
-Shutter Speed         : $shutter_speed
-ISO                   : $iso
-Exposure Compensation : $exposure_compensation
-DateTime Original     : $datetime </pre>
+[Camera]
+    $camera
+[Lens]
+    $lens
+[Focal Length]
+    $focal_length
+[Focal Length in 35mm]
+    $focal_length_in_35mm
+[Aperture]
+    $aperture
+[Shutter Speed]
+    $shutter_speed
+[ISO]
+    $iso
+[Exposure Compensation]
+    $exposure_compensation
+[DateTime Original]
+    $datetime </pre>
 """
 
 PRETTY_STYLE = """

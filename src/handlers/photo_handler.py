@@ -3,7 +3,10 @@ from os import remove
 
 import magic
 import uuid
-import math
+import io
+import sys
+
+from PIL import Image
 from telegram import Update, constants
 from telegram.ext import ContextTypes
 from config import PHOTO_PATH
@@ -14,6 +17,7 @@ from src.exifutils.styles import Style, DEFAULT_STYLE, DEFAULT_STYLE_FF, FULL_IN
 from src.handlers.helper import remove_original_doc_from_server
 
 SUPPORTED_MIME_LIST = ("image/jpeg", "image/png")
+MAX_IMAGE_DIM = 10000
 
 def get_description(photo_path: str, style: Style) -> str:
     logging.info("Using Pillow backend...")
@@ -23,6 +27,22 @@ def get_description(photo_path: str, style: Style) -> str:
         worker = ExifToolWorker(photo_path)
     return worker.get_description(style)
 
+def img_resize(photo_path: str) -> Image.Image:
+    img = Image.open(photo_path)
+    w, h = img.size
+    w_max = MAX_IMAGE_DIM * w // (w+h)
+    h_max = MAX_IMAGE_DIM - w_max
+    logging.info(f"Image size: width={w}, height={h}")
+    logging.info(f"Max Image size: width={w_max}, height={h_max}")
+
+    img = img.resize((min(w_max, w), min(h_max, h)), Image.Resampling.LANCZOS)
+    return img
+
+def img_to_bytes(image: Image) -> bytes:
+    b_img = io.BytesIO()
+    image.save(b_img, format="JPEG")
+    b_img = b_img.getvalue()
+    return b_img
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> None:
     logger = logging.getLogger(__name__)
@@ -66,6 +86,11 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
             logging.error("Can't remove file")
             logging.error(e.args)
         description = f"{mimetype} not supported!"
+
+        await update.message.reply_text(
+            text=description,
+            parse_mode=constants.ParseMode.HTML
+        )
     else:
         logging.info("Parsing EXIF data...")
         try:
@@ -76,12 +101,17 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
                 output_style = PRETTY_STYLE
             logging.info(f"Output Style {Style(style).name}...")
             description = get_description(photo_path, output_style)
-            remove_original_doc_from_server(photo_path, logger)
         except Exception as e:
             logging.error("Cannot parse EXIF data!")
             logging.error(e.args)
             description = "Cannot parse EXIF data!"
-            remove_original_doc_from_server(photo_path, logger)
 
-    await update.message.reply_text(description, parse_mode=constants.ParseMode.HTML)
+        img = img_resize(photo_path)
+        b_img = img_to_bytes(img)
+        await update.message.reply_photo(
+            photo=b_img,
+            caption=description,
+            parse_mode=constants.ParseMode.HTML
+        )
+        remove_original_doc_from_server(photo_path, logger)
     return
