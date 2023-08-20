@@ -4,7 +4,6 @@ from os import remove
 import magic
 import uuid
 import io
-import sys
 
 from PIL import Image
 from telegram import Update, constants
@@ -14,7 +13,7 @@ from config import PHOTO_PATH
 from src.exifutils.exiftoolworker import ExifToolWorker
 from src.exifutils.pillowworker import PillowWorker
 from src.exifutils.styles import Style, DEFAULT_STYLE, DEFAULT_STYLE_FF, FULL_INFO_STYLE, PRETTY_STYLE, PRETTY_STYLE_FF
-from src.handlers.helper import remove_original_doc_from_server
+from src.handlers.helper import remove_original_doc_from_server, reply_photo, reply_text
 
 SUPPORTED_MIME_LIST = ("image/jpeg", "image/png")
 MAX_IMAGE_DIM = 10000
@@ -87,7 +86,8 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
             logging.error(e.args)
         description = f"{mimetype} not supported!"
 
-        await update.message.reply_text(
+        await reply_text(
+            update=update,
             text=description,
             parse_mode=constants.ParseMode.HTML
         )
@@ -108,7 +108,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
 
         img = img_resize(photo_path)
         b_img = img_to_bytes(img)
-        await update.message.reply_photo(
+        
+        await reply_photo(
+            update=update,
             photo=b_img,
             caption=description,
             parse_mode=constants.ParseMode.HTML

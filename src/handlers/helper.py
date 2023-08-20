@@ -1,4 +1,8 @@
 from os import remove
+import logging
+import telegram
+from telegram import Update, constants
+import time
 
 def remove_original_doc_from_server(photo_path, logger):
     """
@@ -20,3 +24,45 @@ def escape(text: str) -> str:
         return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     except AttributeError:
         return 'N/A'
+
+def retry_on_error(wait=0.1, retry=0):
+    def decorator(func):
+        async def inner(*args, **kwargs): 
+            i = 0
+            while True:
+                try:
+                    await func(*args, **kwargs)
+                    break
+                except telegram.error.NetworkError:
+                    logging.exception(f"Network Error. Retrying...{i}")
+                    i += 1
+                    time.sleep(wait)
+                    if retry != 0 and i == retry:
+                        raise telegram.error.NetworkError
+        return inner
+    return decorator
+
+@retry_on_error(retry=3)
+async def reply_photo(update: Update, photo: bytes, caption: str, parse_mode: str):
+    try:
+        await update.message.reply_photo(
+            photo=photo,
+            caption=caption,
+            parse_mode=parse_mode
+        )
+    except Exception as e:
+        await update.message.reply_text(
+            text=f"Error occurred: {str(e)}"
+        )
+
+@retry_on_error(retry=3)
+async def reply_text(update: Update, text: str, parse_mode: str):
+    try:
+        await update.message.reply_text(
+            text=text,
+            parse_mode=parse_mode
+        )
+    except Exception as e:
+        await update.message.reply_text(
+            text=f"Error occurred: {str(e)}"
+        )
