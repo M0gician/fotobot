@@ -1,6 +1,6 @@
 import math
 from fractions import Fraction
-from PIL import Image, ExifTags
+from PIL import Image, ExifTags, IptcImagePlugin
 import logging
 from datetime import datetime
 from enum import IntEnum
@@ -28,10 +28,31 @@ class PillowWorker(ExifWorker):
         numerator, denominator = frac.numerator, frac.denominator
         return f"{numerator}/{denominator}" if numerator != 0 else "0"
 
+    @staticmethod  
+    def convert_to_degrees(value: (int, int, int)) -> float:
+        """Helper function to convert the GPS coordinates stored in the EXIF to degrees in float format"""
+        degrees = value[0]
+        minutes = value[1] / 60.0
+        seconds = value[2] / 3600.0
+
+        return degrees + minutes + seconds
+
     def __init__(self, img_path: str) -> None:
         with Image.open(img_path) as img:
             self.img = img
-            self.exif = {**img.getexif(), **img.getexif().get_ifd(ExifTags.Base.ExifOffset)}
+            self.width, self.height = img.size
+            self.exif = {
+                **img.getexif(),
+                **img.getexif().get_ifd(ExifTags.Base.ExifOffset)
+            }
+            self.iptc = {}
+
+            gps_info = img.getexif().get_ifd(ExifTags.Base.GPSInfo)
+            iptc = IptcImagePlugin.getiptcinfo(img)
+            if gps_info:
+                self.exif |= {**gps_info}
+            if iptc:
+                self.iptc = {**iptc}
     
     def get_tag_with_log(self, tag: IntEnum) -> str:
         tag_info = self.exif.get(tag, '')
@@ -139,3 +160,90 @@ class PillowWorker(ExifWorker):
             date_time_obj = datetime.strptime(date_time, '%Y:%m:%d %H:%M:%S')
             return str(date_time_obj)
         return "Unknown DateTime Original"
+    
+    def get_metering_mode(self) -> str:
+        mode = self.get_tag_with_log(ExifTags.Base.MeteringMode)
+        return mode if mode else "Unknown Metering Mode"
+    
+    def get_orientation(self) -> int:
+        orientation = self.get_tag_with_log(ExifTags.Base.Orientation)
+        return int(orientation) if orientation else 1
+    
+    def get_image_dimensions(self) -> str:
+        if self.width and self.height:
+            return f"{self.width} x {self.height}"
+        return "Unknown Image Dimensions"
+    
+    def get_bits_per_sample(self) -> str:
+        bits_per_sample = self.get_tag_with_log(ExifTags.Base.BitsPerSample)
+        return f"{bits_per_sample} bit" if bits_per_sample else "Unknown Bit"
+        
+    def get_author(self) -> str:
+        author = self.get_tag_with_log(ExifTags.Base.Artist)
+        if not author and self.iptc and (2, 80) in self.iptc:
+            author = self.iptc[(2, 80)].decode('utf-8', errors='replace')
+        return author if author else "Unknown Photographer"
+    
+    def get_title(self) -> str:
+        if self.iptc and (2, 5) in self.iptc:
+            return self.iptc[(2, 5)].decode('utf-8', errors='replace')
+        return ""
+    
+    def get_country(self) -> str:
+        country = "Unknown Country"
+        code = "Unknown Code"
+        if self.iptc and (2, 101) in self.iptc:
+           country = self.iptc[(2, 101)].decode('utf-8', errors='replace')
+        if self.iptc and (2, 100) in self.iptc:
+           code = self.iptc[(2, 100)].decode('utf-8', errors='replace')
+        
+        return f"{country}, {code}"
+    
+    def get_location(self) -> str:
+        city = "Unknown City"
+        province = "Unknown Province or State"
+        if self.iptc and (2, 90) in self.iptc:
+            city = self.iptc[(2, 90)].decode('utf-8', errors='replace')
+        if self.iptc and (2, 95) in self.iptc:
+            province = self.iptc[(2, 95)].decode('utf-8', errors='replace')
+        
+        return f"{province}, {city}" 
+    
+    def get_keywords(self) -> str:
+        keywords = []
+        if self.iptc and (2, 25) in self.iptc:
+            for keyword in self.iptc[(2, 25)]:
+                keywords.append(keyword.decode('utf-8', errors='replace'))
+
+        return ", ".join(keywords) if keywords else "Unknown Keywords"
+    
+    def get_f_latitude_longitude(self) -> (float, float):
+        lat = None
+        lon = None
+
+        gps_latitude = self.get_tag_with_log(ExifTags.GPS.GPSLatitude)
+        gps_latitude_ref = self.get_tag_with_log(ExifTags.GPS.GPSLatitudeRef)
+        gps_longitude = self.get_tag_with_log(ExifTags.GPS.GPSLongitude)
+        gps_longitude_ref = self.get_tag_with_log(ExifTags.GPS.GPSLongitudeRef)
+
+        if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
+            lat = self.convert_to_degrees(gps_latitude)
+            if gps_latitude_ref != "N":                     
+                lat = 0 - lat
+
+            lon = self.convert_to_degrees(gps_longitude)
+            if gps_longitude_ref != "E":
+                lon = 0 - lon
+        
+        return lat, lon
+    
+    def get_latitude_longitude(self) -> str:
+        lat = None
+        lon = None
+        gps_latitude_ref = self.get_tag_with_log(ExifTags.GPS.GPSLatitudeRef)
+        gps_longitude_ref = self.get_tag_with_log(ExifTags.GPS.GPSLongitudeRef)
+
+        lat, lon = self.get_f_latitude_longitude()
+        if lat and lon:
+            return f"{lat:.6f}° {gps_latitude_ref}, {lon:.6f}° {gps_longitude_ref}"
+        return "Unknown GPS Coordinate"

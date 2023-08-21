@@ -49,6 +49,51 @@ class ExifWorker(ABC):
     @abstractmethod
     def get_datetime(self) -> str:
         pass
+    
+    @abstractmethod
+    def get_metering_mode(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_orientation(self) -> int:
+        pass
+    
+    @abstractmethod
+    def get_image_dimensions(self) -> str:
+        pass
+    
+    @abstractmethod
+    def get_bits_per_sample(self) -> str:
+        pass
+
+    @abstractmethod 
+    def get_author(self) -> str:
+        pass
+        
+    @abstractmethod
+    def get_title(self) -> str:
+        pass
+        
+    @abstractmethod
+    def get_country(self) -> str:
+        pass
+        
+    @abstractmethod
+    def get_location(self) -> str:
+        pass
+        
+    @abstractmethod
+    def get_keywords(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_latitude_longitude(self) -> str:
+        pass
+
+    @abstractmethod
+    def get_f_latitude_longitude(self) -> str:
+        pass
+
 
     def get_description(self, style=DEFAULT_STYLE) -> str:
         mapping = {
@@ -60,7 +105,16 @@ class ExifWorker(ABC):
             'shutter_speed': self.get_shutter_speed(),
             'iso': self.get_iso(),
             'exposure_compensation': self.get_exposure_compensation(),
-            'datetime': self.get_datetime()
+            'datetime': self.get_datetime(),
+            'metering_mode': self.get_metering_mode(),
+            'image_dimensions': self.get_image_dimensions(),
+            'bits_per_sample': self.get_bits_per_sample(),
+            'author': self.get_author(),
+            'title': self.get_title(),
+            'country': self.get_country(),
+            'location': self.get_location(),
+            'keywords': self.get_keywords(),
+            'gps_coordinates': self.get_latitude_longitude(),
         }
         focal_length = self.get_focal_length()
         focal_length_in_35mm = self.get_focal_length_in_35mm()

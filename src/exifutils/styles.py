@@ -6,7 +6,7 @@ class Style(Enum):
     PRETTY = 3
 
 DEFAULT_STYLE = """
-
+$title
 ——————————
 Camera: $camera
 Lens: $lens
@@ -14,7 +14,7 @@ $focal_length ($focal_length_in_35mm equiv), $aperture, $shutter_speed, $iso
 """
 
 DEFAULT_STYLE_FF = """
-
+$title
 ——————————
 Camera: $camera
 Lens: $lens
@@ -38,12 +38,27 @@ FULL_INFO_STYLE = """<pre>
     $iso
 [Exposure Compensation]
     $exposure_compensation
+[Metering Mode]
+    $metering_mode
+[Image Dimensions]
+    $image_dimensions
+[Author]
+    $author
+[Title]
+    $title
+[Location]
+    $location
+    $country
+[GPS Coordinates]
+    $gps_coordinates
+[Keywords]
+    $keywords
 [DateTime Original]
     $datetime </pre>
 """
 
 PRETTY_STYLE = """
-💭: 
+💭: $title
 ——————————
 📸: $camera / $lens
 📝: $focal_length_in_35mm, $aperture, $shutter_speed, $iso
@@ -51,7 +66,7 @@ PRETTY_STYLE = """
 """
 
 PRETTY_STYLE_FF = """
-💭: 
+💭: $title
 ——————————
 📸: $camera / $lens
 📝: $focal_length, $aperture, $shutter_speed, $iso
