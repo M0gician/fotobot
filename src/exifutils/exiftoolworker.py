@@ -57,9 +57,9 @@ class ExifToolWorker(ExifWorker):
         elif cam_make.startswith("sony"):
             subtype = cam_model
             if cam_model.startswith("ILCE-"):
-                subtype = cam_model[5:]
+                subtype = f"\u03B1{cam_model[5:]}"
             # Add alpha symbol to Sony Models
-            return f"Sony \u03B1{subtype}"
+            return f"Sony {subtype}"
         elif cam_make.startswith("canon"):
             if cam_model[-2:] == "m2":
                 cam_model = cam_model[:-2] + ' Mark II'
@@ -108,6 +108,10 @@ class ExifToolWorker(ExifWorker):
             
         if lens_id:
             return lens_id
+        elif lens_make:
+            return lens_make
+        elif lens_model:
+            return lens_model
         else:
             logging.warning("Unknown lens, return as is")
             return "Unknown Lens"
