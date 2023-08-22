@@ -1,5 +1,4 @@
 import logging
-from os import remove
 
 import magic
 import uuid
@@ -8,6 +7,7 @@ import io
 from PIL import Image
 from telegram import Update, constants
 from telegram.ext import ContextTypes
+from pillow_heif import register_heif_opener
 from config import PHOTO_PATH
 
 from src.exifutils.exiftoolworker import ExifToolWorker
@@ -16,7 +16,20 @@ from src.exifutils.exifworker import ExifWorker
 from src.exifutils.styles import Style, DEFAULT_STYLE, DEFAULT_STYLE_FF, FULL_INFO_STYLE, PRETTY_STYLE, PRETTY_STYLE_FF
 from src.handlers.helper import remove_original_doc_from_server, reply_photo, reply_text
 
-SUPPORTED_MIME_LIST = ("image/jpeg", "image/png")
+SUPPORTED_MIME_LIST = (
+    "image/jpeg", "image/png",
+    "HEIF/heic", "HEIF/heix", "HEIF/hevc",
+    "HEIF/heim", "HEIF/heis", "HEIF/hevm", "HEIF/hevs",
+)
+HEIF_MAPPING = {
+    "ftypheic": "HEIF/heic",
+    "ftypheix": "HEIF/heix",
+    "ftyphevc": "HEIF/hevc",
+    "ftypheim": "HEIF/heim",
+    "ftypheis": "HEIF/heis",
+    "ftyphevm": "HEIF/hevm",
+    "ftyphevs": "HEIF/hevs",
+}
 MAX_IMAGE_DIM = 10000
 
 def get_worker(photo_path: str) -> ExifWorker:
@@ -61,6 +74,19 @@ def img_to_bytes(image: Image) -> bytes:
     b_img = b_img.getvalue()
     return b_img
 
+def get_mime(photo_path: str) -> str:
+    mime_guesser = magic.Magic(mime=True)
+    mimetype = mime_guesser.from_file(photo_path)
+
+    if mimetype == "application/octet-stream":
+        with open(photo_path, 'rb') as f:
+            f.read(4)
+            b_signature = f.read(8)
+            signature = b_signature.decode('utf-8')
+            if signature in HEIF_MAPPING.keys():
+                mimetype = HEIF_MAPPING[signature]
+    return mimetype if mimetype else "Unknown"
+
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> None:
     logger = logging.getLogger(__name__)
     logging.info("photo_handler started")
@@ -77,32 +103,15 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
     logging.info(f"Download completed from user {user.full_name}")
 
     logging.info("Guessing file type")
-    mime_guesser = magic.Magic(mime=True)
-    mimetype = mime_guesser.from_file(photo_path)
+    mimetype = get_mime(photo_path)
     description = ""
-
-    if mimetype is None:
-        logging.error("Cannot guess file type!")
-
-        try:
-            logging.info("Preparing for file deletion from server (kind guess)")
-            remove("documents/image")
-        except Exception as e:
-            logging.error("Can't remove file (kind guess)")
-            logging.error(e.args)
-        description = "Unknown file type!"
-
     logging.info(f"File MIME type: {mimetype}")
 
     if mimetype not in SUPPORTED_MIME_LIST:
-        logging.info(f"{mimetype} not supported!")
-        logging.info("Removing file...")
-        try:
-            remove("documents/image")
-        except Exception as e:
-            logging.error("Can't remove file")
-            logging.error(e.args)
-        description = f"{mimetype} not supported!"
+        if mimetype == 'Unknown':
+            description = "Unknown file type!"
+        else:
+            description = f"{mimetype} not supported!"
 
         await reply_text(
             update=update,
@@ -110,6 +119,8 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
             parse_mode=constants.ParseMode.HTML
         )
     else:
+        if mimetype.startswith("HEIF"):
+            register_heif_opener()
         logging.info("Parsing EXIF data...")
         coordinates = None
         orientation = None
@@ -140,5 +151,5 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
         ) 
         if coordinates and coordinates[0] and coordinates[1]:
             await update.message.reply_location(latitude=coordinates[0], longitude=coordinates[1])
-        remove_original_doc_from_server(photo_path, logger)
+    remove_original_doc_from_server(photo_path, logger)
     return

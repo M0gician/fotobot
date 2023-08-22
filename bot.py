@@ -94,7 +94,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def style(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     style = update.message.text[:8].strip()
     await update.message.reply_text(
-        "I see! Please send me a photo of <code>.jpg/.png</code> as file",
+        "I see! Please send me a photo of <code>.jpg/.png/.heif</code> as file",
         reply_markup=ReplyKeyboardRemove(),
         parse_mode=constants.ParseMode.HTML
     )
