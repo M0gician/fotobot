@@ -2,13 +2,6 @@ from abc import (
     ABC,
     abstractmethod
 )
-
-from src.exifutils.styles import (
-    DEFAULT_STYLE,
-    DEFAULT_STYLE_FF,
-    PRETTY_STYLE,
-    PRETTY_STYLE_FF,
-)
 import logging
 from string import Template
 
@@ -95,7 +88,7 @@ class ExifWorker(ABC):
         pass
 
 
-    def get_description(self, style=DEFAULT_STYLE) -> str:
+    def get_description(self, template: str) -> str:
         mapping = {
             'camera': self.get_camera(),
             'lens': self.get_lens(),
@@ -116,17 +109,9 @@ class ExifWorker(ABC):
             'keywords': self.get_keywords(),
             'gps_coordinates': self.get_latitude_longitude(),
         }
-        focal_length = self.get_focal_length()
-        focal_length_in_35mm = self.get_focal_length_in_35mm()
 
         try:
-            if focal_length_in_35mm[:len(focal_length)] == focal_length or focal_length_in_35mm.startswith("Unknown"):
-                logging.info("Output in FF format")
-                if style == DEFAULT_STYLE:
-                    style = DEFAULT_STYLE_FF
-                elif style == PRETTY_STYLE:
-                    style = PRETTY_STYLE_FF
-            template = Template(style)
+            template = Template(template)
             description = template.safe_substitute(mapping)
             return description
         except KeyError as e:

@@ -1,74 +1,113 @@
 from enum import Enum
 
+
 class Style(Enum):
     DEFAULT = 1
     FULL = 2
     PRETTY = 3
 
-DEFAULT_STYLE = """
-$title
-——————————
-Camera: $camera
-Lens: $lens
-$focal_length ($focal_length_in_35mm equiv), $aperture, $shutter_speed, $iso
-"""
 
-DEFAULT_STYLE_FF = """
-$title
-——————————
-Camera: $camera
-Lens: $lens
-$focal_length, $aperture, $shutter_speed, $iso
-"""
+def get_default_style(full_frame=False, special=False, unknown=False,
+                      country=False, location=False, title=False, gps=False) -> str:
+    style = ""
+    if title:
+        style += "$title\n"
+    else:
+        style += "\n"
 
-FULL_INFO_STYLE = """<pre>
-[Camera]
-    $camera
-[Lens]
-    $lens
-[Focal Length]
-    $focal_length
-[Focal Length in 35mm]
-    $focal_length_in_35mm
-[Aperture]
-    $aperture
-[Shutter Speed]
-    $shutter_speed
-[ISO]
-    $iso
-[Exposure Compensation]
-    $exposure_compensation
-[Metering Mode]
-    $metering_mode
-[Image Dimensions]
-    $image_dimensions
-[Author]
-    $author
-[Title]
-    $title
-[Location]
-    $location
-    $country
-[GPS Coordinates]
-    $gps_coordinates
-[Keywords]
-    $keywords
-[DateTime Original]
-    $datetime </pre>
-"""
+    style += "——————————\n"
+    style += "Camera: $camera\n"
+    style += "Lens: $lens\n"
 
-PRETTY_STYLE = """
-💭: $title
-——————————
-📸: $camera / $lens
-📝: $focal_length_in_35mm, $aperture, $shutter_speed, $iso
-📅: $datetime
-"""
+    if unknown:
+        style += "Parameters unknown\n"
+    elif full_frame:
+        style += "$focal_length, $aperture, $shutter_speed, $iso\n"
+    else:
+        if special:
+            style += "$focal_length_in_35mm, $aperture, $shutter_speed, $iso\n"
+        else:
+            style += "$focal_length ($focal_length_in_35mm equiv), $aperture, $shutter_speed, $iso\n"
 
-PRETTY_STYLE_FF = """
-💭: $title
-——————————
-📸: $camera / $lens
-📝: $focal_length, $aperture, $shutter_speed, $iso
-📅: $datetime
-"""
+    if location or country:
+        if country and country:
+            style += "🗺️: $location, $country\n"
+        elif country:
+            style += "🗺️: $country\n"
+        else:
+            style += "🗺️: $location\n"
+    if gps:
+        style += "📍: $gps_coordinates\n"
+    
+    return style[:-1]
+
+def get_full_style(full_frame=False, exposure_compensation=False, metering=False, author=False,
+                   title=False, country=False, location=False, gps=False, keywords=False
+                   ) -> str:
+    style = "<pre>\n"
+    style += "[Camera]\n" + "    $camera\n"
+    style += "[Lens]\n" + "    $lens\n"
+    style += "[Focal Length]\n" + "    $focal_length\n"
+
+    if not full_frame:
+        style += "[Focal Length in 35mm]\n" + "    $focal_length_in_35mm\n"
+
+    style += "[Aperture]\n" + "    $aperture\n"
+    style += "[Shutter Speed]\n" + "    $shutter_speed\n"
+    style += "[ISO]\n" + "    $iso\n"
+
+    if exposure_compensation:
+        style += "[Exposure Compensation]\n" + "    $exposure_compensation\n"
+    if metering:
+        style += "[Metering Mode]\n" + "    $metering_mode\n"
+
+    style += "[Image Dimensions]\n" + "    $image_dimensions\n"
+    if author:
+        style += "[Author]\n" + "    $author\n"
+    if title:
+        style += "[Title]\n" + "    $title\n"
+    if location or country:
+        style += "[Location]\n"
+        if location:
+            style += "    $location\n"
+        if country:
+            style += "    $country\n"
+    if gps:
+        style += "[GPS Coordinates]\n" + "    $gps_coordinates\n"
+    if keywords:
+        style += "[Keywords]\n" + "    $keywords\n"
+    
+    style += "[DateTime Original]\n" + "    $datetime </pre>"
+
+    return style
+
+def get_pretty_style(full_frame=False, is_unknown=False, country=False, location=False, title=False, gps=False) -> str:
+    style = ""
+    if title:
+        style += "💭: $title\n"
+    else:
+        style += "💭: \n"
+
+    style += "——————————\n"
+    style += "📸: $camera / $lens\n"
+
+    if is_unknown:
+        style += "📝: Parameters Unknown\n"
+    elif full_frame:
+        style += "📝: $focal_length, $aperture, $shutter_speed, $iso\n"
+    else:
+        style += "📝: $focal_length_in_35mm, $aperture, $shutter_speed, $iso\n"
+
+    style += "📅: $datetime\n"
+
+    if location or country:
+        if location and country:
+            style += "🗺️: $location, $country\n"
+        elif location:
+            style += "🗺️: $location\n"
+        else:
+            style += "🗺️: $country\n"
+    if gps:
+        style += "📍: $gps_coordinates\n"
+    
+    return style[:-1]

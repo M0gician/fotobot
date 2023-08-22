@@ -13,7 +13,7 @@ from config import PHOTO_PATH
 from src.exifutils.exiftoolworker import ExifToolWorker
 from src.exifutils.pillowworker import PillowWorker
 from src.exifutils.exifworker import ExifWorker
-from src.exifutils.styles import Style, DEFAULT_STYLE, DEFAULT_STYLE_FF, FULL_INFO_STYLE, PRETTY_STYLE, PRETTY_STYLE_FF
+from src.exifutils.styles import Style, get_default_style, get_full_style, get_pretty_style
 from src.handlers.helper import remove_original_doc_from_server, reply_photo, reply_text
 
 SUPPORTED_MIME_LIST = (
@@ -40,14 +40,40 @@ def get_worker(photo_path: str) -> ExifWorker:
         worker = ExifToolWorker(photo_path)
     return worker
 
-def get_description(worker: ExifWorker, style: Style) -> (str, (float, float)):
-    return worker.get_description(style)
+def get_description(worker: ExifWorker, template: str) -> str:
+    return worker.get_description(template)
 
 def get_coordinates(worker: ExifWorker) -> (float, float):
     return worker.get_f_latitude_longitude()
 
 def get_orientation(worker: ExifWorker) -> int:
     return worker.get_orientation()
+
+def get_template(worker: ExifWorker, style: int) -> str:
+    is_full_frame = worker.get_focal_length() == worker.get_focal_length_in_35mm() or worker.get_focal_length_in_35mm().startswith("Unknown")
+    # Deal with combo output by Exiftool
+    is_exposure_compensation = not worker.get_exposure_compensation().startswith("Unknown")
+    is_metering = not worker.get_metering_mode().startswith("Unknown")
+    is_author = not worker.get_author().startswith("Unknown")
+    is_title = worker.get_title() != ""
+    is_location = not worker.get_location().startswith("Unknown")
+    is_country = not worker.get_country().startswith("Unknown")
+    is_gps = not worker.get_latitude_longitude().startswith("Unknown")
+    is_keywords = not worker.get_keywords().startswith("Unknown")
+    is_special = worker.get_focal_length_in_35mm().endswith(')')
+    is_unknown = worker.get_aperture().startswith("Unknown") and worker.get_iso().startswith("Unknown") and worker.get_shutter_speed().startswith("Unknown")
+
+    if style == Style.FULL.value:
+        return get_full_style(
+            is_full_frame, is_exposure_compensation, is_metering,
+            is_author, is_title, is_country, is_location, is_gps,
+            is_keywords
+        )
+    elif style == Style.PRETTY.value:
+        return get_pretty_style(is_full_frame, is_unknown, is_country, is_location, is_title, is_gps)
+
+    return get_default_style(is_full_frame, is_special, is_unknown, is_country, is_location, is_title, is_gps)
+
 
 def img_resize(photo_path: str, orientation=1) -> Image.Image:
     img = Image.open(photo_path)
@@ -87,6 +113,7 @@ def get_mime(photo_path: str) -> str:
                 mimetype = HEIF_MAPPING[signature]
     return mimetype if mimetype else "Unknown"
 
+
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> None:
     logger = logging.getLogger(__name__)
     logging.info("photo_handler started")
@@ -125,14 +152,11 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
         coordinates = None
         orientation = None
         try:
-            output_style = DEFAULT_STYLE
-            if style == Style.FULL.value:
-                output_style = FULL_INFO_STYLE
-            elif style == Style.PRETTY.value:
-                output_style = PRETTY_STYLE
-            logging.info(f"Output Style {Style(style).name}...")
             worker = get_worker(photo_path)
-            description = get_description(worker, output_style)
+            template = get_template(worker, style)
+            logging.info(f"Output Style {Style(style).name}...")
+
+            description = get_description(worker, template)
             coordinates = get_coordinates(worker)
             orientation = get_orientation(worker)
         except Exception as e:

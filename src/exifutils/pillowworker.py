@@ -163,7 +163,7 @@ class PillowWorker(ExifWorker):
     
     def get_metering_mode(self) -> str:
         mode = self.get_tag_with_log(ExifTags.Base.MeteringMode)
-        return mode if mode else "Unknown Metering Mode"
+        return str(mode) if mode else "Unknown Metering Mode"
     
     def get_orientation(self) -> int:
         orientation = self.get_tag_with_log(ExifTags.Base.Orientation)
