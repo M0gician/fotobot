@@ -3,6 +3,7 @@ import logging
 import magic
 import uuid
 import io
+import math
 
 from PIL import Image
 from telegram import Update, constants
@@ -173,7 +174,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
             caption=description,
             parse_mode=constants.ParseMode.HTML
         ) 
-        if coordinates and coordinates[0] and coordinates[1]:
-            await update.message.reply_location(latitude=coordinates[0], longitude=coordinates[1])
+        if coordinates:
+            lat, lon = coordinates
+            if not math.isnan(lat) and not math.isnan(lon):
+                await update.message.reply_location(latitude=lat, longitude=lon)
     remove_original_doc_from_server(photo_path, logger)
     return

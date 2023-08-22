@@ -2,6 +2,7 @@ import math
 from fractions import Fraction
 from PIL import Image, ExifTags, IptcImagePlugin
 import logging
+import math
 from datetime import datetime
 from enum import IntEnum
 from src.exifutils.exifworker import ExifWorker
@@ -244,6 +245,6 @@ class PillowWorker(ExifWorker):
         gps_longitude_ref = self.get_tag_with_log(ExifTags.GPS.GPSLongitudeRef)
 
         lat, lon = self.get_f_latitude_longitude()
-        if lat and lon:
+        if lat and lon and not math.isnan(lat) and not math.isnan(lon):
             return f"{lat:.6f}° {gps_latitude_ref}, {lon:.6f}° {gps_longitude_ref}"
         return "Unknown GPS Coordinate"
