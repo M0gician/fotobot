@@ -176,7 +176,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
         ) 
         if coordinates:
             lat, lon = coordinates
-            if not math.isnan(lat) and not math.isnan(lon):
+            if lat and lon and not math.isnan(lat) and not math.isnan(lon):
                 await update.message.reply_location(latitude=lat, longitude=lon)
     remove_original_doc_from_server(photo_path, logger)
     return

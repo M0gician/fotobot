@@ -211,7 +211,7 @@ class PillowWorker(ExifWorker):
         
         if city.startswith("Unknown") or province.startswith("Unknown"):
             lat, lon = self.get_f_latitude_longitude()
-            if not math.isnan(lat) and not math.isnan(lon):
+            if lat and lon and not math.isnan(lat) and not math.isnan(lon):
                 geolocator = Nominatim(user_agent="fotobot")
                 location = geolocator.reverse((lat, lon), exactly_one=True)
                 return location.address
