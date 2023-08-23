@@ -6,6 +6,7 @@ import math
 from datetime import datetime
 from enum import IntEnum
 from src.exifutils.exifworker import ExifWorker
+from geopy.geocoders import Nominatim
 
 class PillowWorker(ExifWorker):
 
@@ -207,6 +208,13 @@ class PillowWorker(ExifWorker):
             city = self.iptc[(2, 90)].decode('utf-8', errors='replace')
         if self.iptc and (2, 95) in self.iptc:
             province = self.iptc[(2, 95)].decode('utf-8', errors='replace')
+        
+        if city.startswith("Unknown") or province.startswith("Unknown"):
+            lat, lon = self.get_f_latitude_longitude()
+            if not math.isnan(lat) and not math.isnan(lon):
+                geolocator = Nominatim(user_agent="fotobot")
+                location = geolocator.reverse((lat, lon), exactly_one=True)
+                return location.address
         
         return f"{province}, {city}" 
     

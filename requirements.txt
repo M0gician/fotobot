@@ -1,6 +1,8 @@
 anyio==3.7.1
 certifi==2023.7.22
 exceptiongroup==1.1.2
+geographiclib==2.0
+geopy==2.3.0
 h11==0.14.0
 httpcore==0.17.3
 httpx==0.24.1

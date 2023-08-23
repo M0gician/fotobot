@@ -4,6 +4,7 @@ import math
 from datetime import datetime
 from src.exifutils.exifworker import ExifWorker
 from PIL import Image, ExifTags, IptcImagePlugin
+from geopy.geocoders import Nominatim
 
 class ExifToolWorker(ExifWorker):
 
@@ -202,6 +203,13 @@ class ExifToolWorker(ExifWorker):
         if self.iptc and (2, 95) in self.iptc:
             province = self.iptc[(2, 95)].decode('utf-8', errors='replace')
         
+        if city.startswith("Unknown") or province.startswith("Unknown"):
+            lat, lon = self.get_f_latitude_longitude()
+            if not math.isnan(lat) and not math.isnan(lon):
+                geolocator = Nominatim(user_agent="fotobot")
+                location = geolocator.reverse((lat, lon), exactly_one=True)
+                return location.address
+            
         return f"{province}, {city}" 
     
     def get_keywords(self) -> str:
