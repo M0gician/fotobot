@@ -18,7 +18,7 @@ from src.exifutils.styles import Style, get_default_style, get_full_style, get_p
 from src.handlers.helper import remove_original_doc_from_server, reply_photo, reply_text
 
 SUPPORTED_MIME_LIST = (
-    "image/jpeg", "image/png",
+    "image/jpeg", "image/png", "image/heic",
     "HEIF/heic", "HEIF/heix", "HEIF/hevc",
     "HEIF/heim", "HEIF/heis", "HEIF/hevm", "HEIF/hevs",
 )
