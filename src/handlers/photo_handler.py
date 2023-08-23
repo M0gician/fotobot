@@ -147,7 +147,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
             parse_mode=constants.ParseMode.HTML
         )
     else:
-        if mimetype.startswith("HEIF"):
+        if mimetype == "image/heic" or mimetype.startswith("HEIF"):
             register_heif_opener()
         logging.info("Parsing EXIF data...")
         coordinates = None
