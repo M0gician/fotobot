@@ -216,7 +216,10 @@ class ExifToolWorker(ExifWorker):
         keywords = []
         if self.iptc and (2, 25) in self.iptc:
             for keyword in self.iptc[(2, 25)]:
-                keywords.append(keyword.decode('utf-8', errors='replace'))
+                if isinstance(keyword, int):
+                    keywords.append(str(keyword))
+                else:
+                    keywords.append(keyword.decode('utf-8', errors='replace'))
 
         return ", ".join(keywords) if keywords else "Unknown Keywords"
     
