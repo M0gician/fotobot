@@ -58,7 +58,7 @@ class ExifToolWorker(ExifWorker):
             return f"Nikon {subtype}"
         elif cam_make.startswith("sony"):
             subtype = cam_model
-            if cam_model.startswith("ILCE-"):
+            if cam_model.startswith("ILCE-") and not cam_model.startswith("ILCE-XQ"):
                 subtype = f"\u03B1{cam_model[5:]}"
             # Add alpha symbol to Sony Models
             return f"Sony {subtype}"

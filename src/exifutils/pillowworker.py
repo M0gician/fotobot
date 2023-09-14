@@ -76,7 +76,7 @@ class PillowWorker(ExifWorker):
             return f"Nikon {subtype}"
         elif cam_make.startswith("sony"):
             subtype = cam_model
-            if cam_model.startswith("ILCE-"):
+            if cam_model.startswith("ILCE-") and not cam_model.startswith("ILCE-XQ"):
                 subtype = cam_model[5:]
             # Add alpha symbol to Sony Models
             return f"Sony \u03B1{subtype}"
