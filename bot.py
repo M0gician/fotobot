@@ -122,7 +122,11 @@ async def pretty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 if __name__ == "__main__":
     logger.info("Starting bot...")
-    application = Application.builder().token(TOKEN).build()
+    application = Application.builder()\
+        .token(TOKEN)\
+        .read_timeout(30)\
+        .write_timeout(30)\
+        .build()
 
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.ALL, start)],
