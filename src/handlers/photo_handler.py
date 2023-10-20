@@ -4,6 +4,7 @@ import magic
 import uuid
 import io
 import math
+import pillow_avif
 
 from PIL import Image
 from telegram import Update, constants
@@ -21,6 +22,7 @@ SUPPORTED_MIME_LIST = (
     "image/jpeg", "image/png", "image/heic",
     "HEIF/heic", "HEIF/heix", "HEIF/hevc",
     "HEIF/heim", "HEIF/heis", "HEIF/hevm", "HEIF/hevs",
+    "HEIF/avif"
 )
 HEIF_MAPPING = {
     "ftypheic": "HEIF/heic",
@@ -30,6 +32,7 @@ HEIF_MAPPING = {
     "ftypheis": "HEIF/heis",
     "ftyphevm": "HEIF/hevm",
     "ftyphevs": "HEIF/hevs",
+    "ftypavif": "HEIF/avif",
 }
 MAX_IMAGE_DIM = 10000
 
@@ -81,8 +84,8 @@ def img_resize(photo_path: str, orientation=1) -> Image.Image:
     w, h = img.size
     w_max = MAX_IMAGE_DIM * w // (w+h)
     h_max = MAX_IMAGE_DIM - w_max
-    logging.info(f"Image size: width={w}, height={h}")
-    logging.info(f"Max Image size: width={w_max}, height={h_max}")
+    logging.info("Image size: width=%s, height=%s", w, h)
+    logging.info("Max Image size: width=%s, height=%s", w_max, h_max)
 
     img = img.resize((min(w_max, w), min(h_max, h)), Image.Resampling.LANCZOS)
     
@@ -112,71 +115,159 @@ def get_mime(photo_path: str) -> str:
             signature = b_signature.decode('utf-8')
             if signature in HEIF_MAPPING.keys():
                 mimetype = HEIF_MAPPING[signature]
+    
     return mimetype if mimetype else "Unknown"
 
+
+# async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> None:
+#     logger = logging.getLogger(__name__)
+#     logging.info("photo_handler started")
+#     user = update.message.from_user
+#     photo_path = f"{PHOTO_PATH}/{uuid.uuid4()}_img"
+#     try:
+#         photo_file = await update.message.effective_attachment.get_file()
+#         await photo_file.download_to_drive(photo_path)
+#     except Exception as e:
+#         logging.error("Cannot download file!")
+#         logging.error(e.args)
+#         await update.message.reply_text("Cannot download file! (Max File Size: 20MB) Please try again.")
+#         return
+#     logging.info("Download completed from user %s", user.full_name)
+
+#     logging.info("Guessing file type")
+#     mimetype = get_mime(photo_path)
+#     description = ""
+#     logging.info("File MIME type: %s", mimetype)
+
+#     if mimetype not in SUPPORTED_MIME_LIST:
+#         if mimetype == 'Unknown':
+#             description = "Unknown file type!"
+#         else:
+#             description = f"{mimetype} not supported!"
+
+#         await reply_text(
+#             update=update,
+#             text=description,
+#             parse_mode=constants.ParseMode.HTML
+#         )
+#     else:
+#         if mimetype == "image/heic" or mimetype.startswith("HEIF"):
+#             register_heif_opener()
+#         logging.info("Parsing EXIF data...")
+#         coordinates = None
+#         orientation = None
+#         try:
+#             worker = get_worker(photo_path)
+#             template = get_template(worker, style)
+#             logging.info("Output Style %s...", Style(style).name)
+
+#             description = get_description(worker, template)
+#             coordinates = get_coordinates(worker)
+#             orientation = get_orientation(worker)
+#         except Exception as e:
+#             logging.error("Cannot parse EXIF data!")
+#             logging.error(e.args)
+#             description = "Cannot parse EXIF data!"
+
+#         img = img_resize(photo_path, orientation)
+#         b_img = img_to_bytes(img)
+        
+#         await reply_photo(
+#             update=update,
+#             photo=b_img,
+#             caption=description,
+#             parse_mode=constants.ParseMode.HTML
+#         ) 
+#         if coordinates:
+#             lat, lon = coordinates
+#             if lat and lon and not math.isnan(lat) and not math.isnan(lon):
+#                 await update.message.reply_location(latitude=lat, longitude=lon)
+#     remove_original_doc_from_server(photo_path, logger)
+#     return
+
+async def download_image(update: Update, photo_path: str) -> None:
+    try:
+        photo_file = await update.message.effective_attachment.get_file()
+        await photo_file.download_to_drive(photo_path)
+    except Exception as _:
+        raise IOError from _
+
+def check_mime(mimetype: str) -> None:
+    try:
+        if mimetype not in SUPPORTED_MIME_LIST:
+            raise TypeError
+        if mimetype == "image/heic" or mimetype.startswith("HEIF"):
+            register_heif_opener()
+    except TypeError as _:
+        raise TypeError from _
+
+async def send_msg(update: Update, photo_path: str, caption: str, parse_mode: str, coordinates=None, img_orientation=None) -> None:
+    if caption[-1] != "!":
+        if img_orientation is not None:
+            img_orientation = 1
+        img = img_resize(photo_path, img_orientation)
+        b_img = img_to_bytes(img)
+        await reply_photo(
+            update=update,
+            photo=b_img,
+            caption=caption,
+            parse_mode=parse_mode
+        )
+        if coordinates is not None:
+            lat, lon = coordinates
+            if lat and lon and not math.isnan(lat) and not math.isnan(lon):
+                await update.message.reply_location(latitude=lat, longitude=lon)
+    else:
+        await reply_text(
+            update=update,
+            text=caption,
+            parse_mode=parse_mode
+        )
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, style: int) -> None:
     logger = logging.getLogger(__name__)
     logging.info("photo_handler started")
     user = update.message.from_user
+
     photo_path = f"{PHOTO_PATH}/{uuid.uuid4()}_img"
-    try:
-        photo_file = await update.message.effective_attachment.get_file()
-        await photo_file.download_to_drive(photo_path)
-    except Exception as e:
-        logging.error("Cannot download file!")
-        logging.error(e.args)
-        await update.message.reply_text("Cannot download file! (Max File Size: 20MB) Please try again.")
-        return
-    logging.info(f"Download completed from user {user.full_name}")
-
-    logging.info("Guessing file type")
-    mimetype = get_mime(photo_path)
+    parse_mode = constants.ParseMode.HTML
     description = ""
-    logging.info(f"File MIME type: {mimetype}")
+    coordinates = None
+    orientation = None
 
-    if mimetype not in SUPPORTED_MIME_LIST:
+    try:
+        await download_image(update, photo_path)
+        logging.info("Download completed from user %s", user.full_name)
+
+        logging.info("Guessing file type")
+        mimetype = get_mime(photo_path)
+        check_mime(mimetype)
+        logging.info("File MIME type: %s", mimetype)
+
+        logging.info("Parsing EXIF data...")
+        worker = get_worker(photo_path)
+        template = get_template(worker, style)
+        logging.info("Output Style %s...", Style(style).name)
+        description = get_description(worker, template)
+        coordinates = get_coordinates(worker)
+        orientation = get_orientation(worker)
+        await send_msg(update, photo_path, description, parse_mode, coordinates, orientation)
+        remove_original_doc_from_server(photo_path, logger)
+    except IOError as e:
+        description = "Cannot download file! (Max File Size: 20MB) Please try again."
+        logging.error(description)
+        logging.error(e.args)
+    except TypeError as e:
         if mimetype == 'Unknown':
             description = "Unknown file type!"
         else:
             description = f"{mimetype} not supported!"
+        logging.error(description)
+        logging.error(e.args)
+        remove_original_doc_from_server(photo_path, logger)
+    except Exception as e:
+        description = "Cannot parse EXIF data!"
+        logging.error(description)
+        logging.error(e.args)
+        remove_original_doc_from_server(photo_path, logger)
 
-        await reply_text(
-            update=update,
-            text=description,
-            parse_mode=constants.ParseMode.HTML
-        )
-    else:
-        if mimetype == "image/heic" or mimetype.startswith("HEIF"):
-            register_heif_opener()
-        logging.info("Parsing EXIF data...")
-        coordinates = None
-        orientation = None
-        try:
-            worker = get_worker(photo_path)
-            template = get_template(worker, style)
-            logging.info(f"Output Style {Style(style).name}...")
-
-            description = get_description(worker, template)
-            coordinates = get_coordinates(worker)
-            orientation = get_orientation(worker)
-        except Exception as e:
-            logging.error("Cannot parse EXIF data!")
-            logging.error(e.args)
-            description = "Cannot parse EXIF data!"
-
-        img = img_resize(photo_path, orientation)
-        b_img = img_to_bytes(img)
-        
-        await reply_photo(
-            update=update,
-            photo=b_img,
-            caption=description,
-            parse_mode=constants.ParseMode.HTML
-        ) 
-        if coordinates:
-            lat, lon = coordinates
-            if lat and lon and not math.isnan(lat) and not math.isnan(lon):
-                await update.message.reply_location(latitude=lat, longitude=lon)
-    remove_original_doc_from_server(photo_path, logger)
-    return
