@@ -1,7 +1,23 @@
+
 import logging
 import textwrap
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    constants
+)
+from telegram.ext import (
+    Application,
+    ContextTypes,
+    ConversationHandler,
+    filters,
+    MessageHandler
+)
 from telegram import __version__ as TG_VER
 from src.handlers.helper import escape
+from config import TOKEN, LOGGING_LEVEL
+from src.handlers.photo_handler import photo_handler
 
 try:
     from telegram import __version_info__
@@ -15,23 +31,8 @@ if __version_info__ < (20, 0, 0, "alpha", 5):
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
 
-from telegram import (
-    Update,
-    ReplyKeyboardMarkup,
-    ReplyKeyboardRemove,
-    constants
-)
-from telegram.ext import (
-    Application,
-    ContextTypes,
-    CommandHandler,
-    ConversationHandler,
-    filters,
-    MessageHandler
-)
+logging.basicConfig(level=LOGGING_LEVEL)
 
-from config import TOKEN
-from src.handlers.photo_handler import photo_handler
 
 # Enable logging
 logging.basicConfig(
