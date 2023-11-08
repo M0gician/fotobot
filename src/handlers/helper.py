@@ -1,7 +1,7 @@
 from os import remove
 import logging
 import telegram
-from telegram import Update, constants
+from telegram import Update
 import time
 
 def remove_original_doc_from_server(photo_path, logger):
@@ -27,7 +27,7 @@ def escape(text: str) -> str:
 
 def retry_on_error(wait=0.1, retry=0):
     def decorator(func):
-        async def inner(*args, **kwargs): 
+        async def inner(*args, **kwargs):
             i = 0
             while True:
                 try:

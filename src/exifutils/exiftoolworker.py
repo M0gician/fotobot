@@ -108,11 +108,11 @@ class ExifToolWorker(ExifWorker):
             if lens_id[:5] == "Canon":
                 return lens_id
             
-        if lens_id:
+        if lens_id and not lens_id.strip().startswith("Unknown"):
             return lens_id
-        elif lens_make:
+        elif lens_make and not lens_make.strip().startswith("Unknown"):
             return lens_make
-        elif lens_model:
+        elif lens_model and not lens_model.strip().startswith("Unknown"):
             return lens_model
         else:
             logging.warning("Unknown lens, return as is")
