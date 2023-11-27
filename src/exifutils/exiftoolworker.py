@@ -1,6 +1,7 @@
 import logging
 import exiftool
 import math
+from collections import defaultdict
 from datetime import datetime
 from src.exifutils.exifworker import ExifWorker
 from PIL import Image, ExifTags, IptcImagePlugin
@@ -32,7 +33,7 @@ class ExifToolWorker(ExifWorker):
                 self.iptc = {**iptc}
 
         with exiftool.ExifToolHelper(common_args=None) as et:
-            metadata = et.get_metadata(img_path, params=['-fast1', "-EXIF:All", "-MakerNotes:All", "-Composite:All"])
+            metadata = et.get_metadata(img_path, params=['-fast1'])
             if len(metadata) == 0:
                 logging.error(f"Fail to parse file: {img_path}")
             else:
@@ -82,6 +83,7 @@ class ExifToolWorker(ExifWorker):
         lens_make = self.get_tag_with_log("LensMake")
         lens_id = self.get_tag_with_log("LensID")
         lens_model = self.get_tag_with_log("LensModel")
+        lens_lens = self.get_tag_with_log("Lens")
 
         if lens_make:
             if lens_make == "NIKON":
@@ -107,16 +109,27 @@ class ExifToolWorker(ExifWorker):
         elif cam_make == "canon":
             if lens_id[:5] == "Canon":
                 return lens_id
-            
+        
+        counter = defaultdict(int)
         if lens_id and not lens_id.strip().startswith("Unknown"):
-            return lens_id
-        elif lens_make and not lens_make.strip().startswith("Unknown"):
-            return lens_make
-        elif lens_model and not lens_model.strip().startswith("Unknown"):
-            return lens_model
-        else:
-            logging.warning("Unknown lens, return as is")
-            return "Unknown Lens"
+            counter[lens_id] += 1
+        if lens_make and not lens_make.strip().startswith("Unknown"):
+            counter[lens_make] += 1
+        if lens_model and not lens_model.strip().startswith("Unknown"):
+            counter[lens_model] += 1
+        if lens_lens and not lens_model.strip().startswith("Unknown"):
+            counter[lens_lens] += 1
+        
+        cnt, most_voted_lens = 0, "Unknown"
+        if counter:
+            most_voted = sorted((cnt, lens) for lens, cnt in counter.items())[-1]
+            cnt, most_voted_lens = most_voted[0], most_voted[1]
+        if cnt > 1:
+            return most_voted_lens
+        if cnt == 1:
+            return lens_id if lens_id in counter else lens_make if lens_make in counter else lens_model
+        logging.warning("Unknown lens, return as is")
+        return "Unknown Lens"
     
     def get_focal_length(self) -> str:
         focal_length = self.get_tag_with_log("FocalLength").replace('.0', '', 1)
