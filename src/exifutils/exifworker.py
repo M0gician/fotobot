@@ -28,6 +28,10 @@ class ExifWorker(ABC):
         pass
 
     @abstractmethod
+    def get_dof_in_35mm(self) -> str:
+        pass
+
+    @abstractmethod
     def get_shutter_speed(self) -> str:
         pass
 
@@ -95,6 +99,7 @@ class ExifWorker(ABC):
             'focal_length': self.get_focal_length(),
             'focal_length_in_35mm': self.get_focal_length_in_35mm(), # 'focal_length_35mm' is added to the mapping
             'aperture': self.get_aperture(),
+            'dof_in_35mm': self.get_dof_in_35mm(),
             'shutter_speed': self.get_shutter_speed(),
             'iso': self.get_iso(),
             'exposure_compensation': self.get_exposure_compensation(),
