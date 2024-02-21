@@ -89,6 +89,9 @@ class PillowWorker(ExifWorker):
         else:
             logging.warning("Unknown camera make, return as is")
             if cam_make or cam_model:
+                if cam_make and cam_model:
+                    if cam_model.lower().startswith(cam_make):
+                        return cam_model
                 cam_make = cam_make if cam_make else "Unknown Make"
                 cam_model = cam_model if cam_model else "Unknown Model"
                 return f"{cam_make} {cam_model}"
