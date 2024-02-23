@@ -129,6 +129,9 @@ class PillowWorker(ExifWorker):
         else:
             logging.warning("Unknown lens make, return as is")
             if lens_make or lens_model:
+                if lens_make and lens_model:
+                    if lens_model.lower().startswith(lens_make):
+                        return lens_model
                 lens_make = lens_make if lens_make else "Unknown Make"
                 lens_model = lens_model if lens_model else "Unknown Model"
                 return f"{lens_make} {lens_model}"
