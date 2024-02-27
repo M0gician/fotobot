@@ -149,6 +149,8 @@ class PillowWorker(ExifWorker):
         focal_length_35mm = self.get_tag_with_log(ExifTags.Base.FocalLengthIn35mmFilm)
         aperture = self.get_tag_with_log(ExifTags.Base.FNumber)
 
+        dof_in_35mm = None
+
         if aperture and focal_length and focal_length_35mm:
             dof_in_35mm = round(float(focal_length_35mm / focal_length * aperture), 1)
 
