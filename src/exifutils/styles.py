@@ -27,7 +27,7 @@ def get_default_style(full_frame=False, special=False, unknown=False,
         if special:
             style += "$focal_length_in_35mm, $aperture, $shutter_speed, $iso\n"
         else:
-            style += "$focal_length ($focal_length_in_35mm equiv), $aperture, $shutter_speed, $iso\n"
+            style += "$focal_length ($focal_length_in_35mm equiv), $aperture ($dof_in_35mm equiv), $shutter_speed, $iso\n"
 
     if location or country:
         if country and country:
@@ -51,6 +51,7 @@ def get_full_style(full_frame=False, exposure_compensation=False, metering=False
 
     if not full_frame:
         style += "[Focal Length in 35mm]\n" + "    $focal_length_in_35mm\n"
+        style += "[Depth of Field in 35mm]\n" + "    $dof_in_35mm\n"
 
     style += "[Aperture]\n" + "    $aperture\n"
     style += "[Shutter Speed]\n" + "    $shutter_speed\n"
