@@ -146,8 +146,17 @@ class ExifToolWorker(ExifWorker):
         return f"f/{aperture}" if aperture else "Unknown Aperture"
     
     def get_dof_in_35mm(self) -> str:
-        '''Not implemented yet, see PillowWorker'''
-        return "Unknown Depth of Field in 35mm format"
+        focal_length = self.get_tag_with_log("FocalLength")
+        focal_length_35mm = self.get_tag_with_log("FocalLengthIn35mmFormat")
+        aperture = self.get_tag_with_log("Aperture"))
+
+        dof_in_35mm = None
+
+        if aperture and focal_length and focal_length_35mm:
+            dof_in_35mm = round(
+                    float(focal_length_35mm) / float(focal_length) * float(aperture), 1)
+
+        return f"f/{dof_in_35mm}" if dof_in_35mm else "Unknown Depth of Field in 35mm format
 
     def get_shutter_speed(self) -> str:
         shutter_speed = self.get_tag_with_log("ShutterSpeed")
