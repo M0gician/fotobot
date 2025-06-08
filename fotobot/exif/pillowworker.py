@@ -1,13 +1,19 @@
 import math
 from fractions import Fraction
-from PIL import Image, ExifTags, IptcImagePlugin
 import logging
-import math
 from datetime import datetime
 from enum import IntEnum
-from fotobot.exif.exifworker import ExifWorker
 from geopy.geocoders import Nominatim
+from PIL import ExifTags
 
+from fotobot.exif.exifworker import ExifWorker
+from fotobot.exif.base import (
+    convert_to_degrees,
+    load_metadata,
+    register_worker,
+)
+
+@register_worker("pillow")
 class PillowWorker(ExifWorker):
 
     @staticmethod
@@ -30,31 +36,8 @@ class PillowWorker(ExifWorker):
         numerator, denominator = frac.numerator, frac.denominator
         return f"{numerator}/{denominator}" if numerator != 0 else "0"
 
-    @staticmethod  
-    def convert_to_degrees(value: (int, int, int)) -> float:
-        """Helper function to convert the GPS coordinates stored in the EXIF to degrees in float format"""
-        degrees = value[0]
-        minutes = value[1] / 60.0
-        seconds = value[2] / 3600.0
-
-        return degrees + minutes + seconds
-
     def __init__(self, img_path: str) -> None:
-        with Image.open(img_path) as img:
-            self.img = img
-            self.width, self.height = img.size
-            self.exif = {
-                **img.getexif(),
-                **img.getexif().get_ifd(ExifTags.Base.ExifOffset)
-            }
-            self.iptc = {}
-
-            gps_info = img.getexif().get_ifd(ExifTags.Base.GPSInfo)
-            iptc = IptcImagePlugin.getiptcinfo(img)
-            if gps_info:
-                self.exif |= {**gps_info}
-            if iptc:
-                self.iptc = {**iptc}
+        self.width, self.height, self.exif, self.iptc = load_metadata(img_path)
     
     def get_tag_with_log(self, tag: IntEnum) -> str:
         tag_info = self.exif.get(tag, '')
@@ -245,11 +228,11 @@ class PillowWorker(ExifWorker):
         gps_longitude_ref = self.get_tag_with_log(ExifTags.GPS.GPSLongitudeRef)
 
         if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
-            lat = self.convert_to_degrees(gps_latitude)
+            lat = convert_to_degrees(gps_latitude)
             if gps_latitude_ref != "N":                     
                 lat = 0 - lat
 
-            lon = self.convert_to_degrees(gps_longitude)
+            lon = convert_to_degrees(gps_longitude)
             if gps_longitude_ref != "E":
                 lon = 0 - lon
         
