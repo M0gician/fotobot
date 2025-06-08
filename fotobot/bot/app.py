@@ -1,4 +1,3 @@
-
 import logging
 import textwrap
 from telegram import (
@@ -15,9 +14,8 @@ from telegram.ext import (
     MessageHandler
 )
 from telegram import __version__ as TG_VER
-from src.handlers.helper import escape
-from config import TOKEN, LOGGING_LEVEL
-from src.handlers.photo_handler import photo_handler
+from fotobot.services.helper import escape
+from fotobot.services.photo_handler import photo_handler
 
 try:
     from telegram import __version_info__
@@ -31,14 +29,11 @@ if __version_info__ < (20, 0, 0, "alpha", 5):
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
 
-logging.basicConfig(level=LOGGING_LEVEL)
-
-
 # Enable logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
 )
-logger = logging.getLogger(__name__)
 
 STYLE, DEFAULT, FULL, PRETTY = range(4)
 
@@ -121,13 +116,14 @@ async def pretty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return PRETTY
 
 
-if __name__ == "__main__":
-    logger.info("Starting bot...")
-    application = Application.builder()\
-        .token(TOKEN)\
-        .read_timeout(30)\
-        .write_timeout(30)\
+def build_app(token: str) -> Application:
+    application = (
+        Application.builder()
+        .token(token)
+        .read_timeout(30)
+        .write_timeout(30)
         .build()
+    )
 
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.ALL, start)],
@@ -140,5 +136,4 @@ if __name__ == "__main__":
         fallbacks=[MessageHandler(filters.TEXT, start)],
     )
     application.add_handler(conv_handler)
-
-    application.run_polling()
+    return application

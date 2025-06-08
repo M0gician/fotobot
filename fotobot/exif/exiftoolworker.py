@@ -1,34 +1,13 @@
-import math
-from fractions import Fraction
-from PIL import Image, ExifTags, IptcImagePlugin
 import logging
+import exiftool
 import math
+from collections import defaultdict
 from datetime import datetime
-from enum import IntEnum
-from src.exifutils.exifworker import ExifWorker
+from fotobot.exif.exifworker import ExifWorker
+from PIL import Image, ExifTags, IptcImagePlugin
 from geopy.geocoders import Nominatim
 
-class PillowWorker(ExifWorker):
-
-    @staticmethod
-    def float2frac(f_value: float) -> str:
-        if f_value >= 1.0:
-            return str(f_value)
-        
-        if math.isclose(f_value, 0.0):
-            return "0"
-        elif math.isclose(f_value, 0.33):
-            return "1/3"
-        elif math.isclose(f_value, -0.33):
-            return "-1/3"
-        elif math.isclose(f_value, 0.67):
-            return "2/3"
-        elif math.isclose(f_value, -0.67):
-            return "-2/3"
-
-        frac = Fraction(f_value).limit_denominator(64000)
-        numerator, denominator = frac.numerator, frac.denominator
-        return f"{numerator}/{denominator}" if numerator != 0 else "0"
+class ExifToolWorker(ExifWorker):
 
     @staticmethod  
     def convert_to_degrees(value: (int, int, int)) -> float:
@@ -38,33 +17,37 @@ class PillowWorker(ExifWorker):
         seconds = value[2] / 3600.0
 
         return degrees + minutes + seconds
-
+    
     def __init__(self, img_path: str) -> None:
-        with Image.open(img_path) as img:
-            self.img = img
-            self.width, self.height = img.size
-            self.exif = {
-                **img.getexif(),
-                **img.getexif().get_ifd(ExifTags.Base.ExifOffset)
-            }
-            self.iptc = {}
+        self.img_path = img_path
+        self.exif = {}
+        self.iptc = {}
 
+        with Image.open(img_path) as img:
+            self.width, self.height = img.size
             gps_info = img.getexif().get_ifd(ExifTags.Base.GPSInfo)
             iptc = IptcImagePlugin.getiptcinfo(img)
             if gps_info:
-                self.exif |= {**gps_info}
+                self.exif = {**gps_info}
             if iptc:
                 self.iptc = {**iptc}
+
+        with exiftool.ExifToolHelper(common_args=None) as et:
+            metadata = et.get_metadata(img_path, params=['-fast1'])
+            if len(metadata) == 0:
+                logging.error(f"Fail to parse file: {img_path}")
+            else:
+                self.exif |= metadata[0]
     
-    def get_tag_with_log(self, tag: IntEnum) -> str:
+    def get_tag_with_log(self, tag: str) -> str:
         tag_info = self.exif.get(tag, '')
         if tag_info == '':
-            logging.warning(f"No {tag.name} found")
+            logging.warning(f"No {tag} found")
         return tag_info
-
+    
     def get_camera(self) -> str:
-        cam_make = self.get_tag_with_log(ExifTags.Base.Make).lower()
-        cam_model = self.get_tag_with_log(ExifTags.Base.Model)
+        cam_make = self.get_tag_with_log("Make").lower()
+        cam_model = self.get_tag_with_log("Model")
 
         if cam_make.startswith("nikon"):
             subtype = cam_model
@@ -77,9 +60,9 @@ class PillowWorker(ExifWorker):
         elif cam_make.startswith("sony"):
             subtype = cam_model
             if cam_model.startswith("ILCE-") and not cam_model.startswith("ILCE-XQ"):
-                subtype = cam_model[5:]
+                subtype = f"\u03B1{cam_model[5:]}"
             # Add alpha symbol to Sony Models
-            return f"Sony \u03B1{subtype}"
+            return f"Sony {subtype}"
         elif cam_make.startswith("canon"):
             if cam_model[-2:] == "m2":
                 cam_model = cam_model[:-2] + ' Mark II'
@@ -97,85 +80,106 @@ class PillowWorker(ExifWorker):
                 return f"{cam_make} {cam_model}"
             else:
                 return "Unknown Camera"
-
+        
     def get_lens(self) -> str:
-        lens_make = self.get_tag_with_log(ExifTags.Base.LensMake).lower()
-        lens_model = self.get_tag_with_log(ExifTags.Base.LensModel)
-    
-        if lens_make.startswith("nikon"):
-            lens = lens_model
-            if lens_model.startswith("NIKKOR"):
-                lens = lens_model[7:]
-                # Replace Z with DOUBLE-STRUCK CAPITAL Z
-                lens = f"\u2124{lens[1:]}" if lens[0] == 'Z' else lens
-            return f"Nikkor {lens}"
-        elif lens_make.startswith("sony") or lens_model[:2] in ('FE', 'E '):
-            return f"Sony {lens_model}"
-        elif lens_make.startswith("canon") or lens_model[:2] in ('EF', 'RF'):
-            if lens_model[:2] in ('EF', 'RF'):
-                # EF/RF for full frame, EF-S/EF-M/RF-S for crop
-                if lens_model[2] == '-':
-                    lens_model = f"{lens_model[:4]} {lens_model[4:]}"
-                else:
-                    lens_model = f"{lens_model[:2]} {lens_model[2:]}"
-            return f"Canon {lens_model}"
-        elif lens_make.startswith("fujifilm"):
-            if lens_model[:2] in ('XF', 'GF'):
-                # Separate mount info from focal length
-                lens_model = f"{lens_model[:2]} {lens_model[2:]}"
-                # Separate focal length and aperture info
-                lens_model = lens_model.replace('mm', 'mm ', 1)
-            return f"Fujinon {lens_model}"
-        else:
-            logging.warning("Unknown lens make, return as is")
-            if lens_make or lens_model:
-                if lens_make and lens_model:
-                    if lens_model.lower().startswith(lens_make):
-                        return lens_model
-                lens_make = lens_make if lens_make else "Unknown Make"
-                lens_model = lens_model if lens_model else "Unknown Model"
-                return f"{lens_make} {lens_model}"
-            else:
-                return "Unknown Lens"
+        cam_make = self.get_tag_with_log("Make").lower()
+        lens_make = self.get_tag_with_log("LensMake")
+        lens_id = self.get_tag_with_log("LensID")
+        lens_model = self.get_tag_with_log("LensModel")
+        lens_lens = self.get_tag_with_log("Lens")
 
+        if lens_make:
+            if lens_make == "NIKON":
+                lens = lens_model
+                if lens_model.startswith("NIKKOR"):
+                    lens = lens_model[7:]
+                    # Replace Z with DOUBLE-STRUCK CAPITAL Z
+                    lens = f"\u2124{lens[1:]}" if lens[0] == 'Z' else lens
+                return f"Nikkor {lens}"
+            elif lens_make == "FUJIFILM":
+                if lens_model[:2] in ('XF', 'GF'):
+                    # Separate mount info from focal length
+                    lens_model = f"{lens_model[:2]} {lens_model[2:]}"
+                    # Separate focal length and aperture info
+                    lens_model = lens_model.replace('mm', 'mm ', 1)
+                return f"Fujinon {lens_model}"
+        
+        if cam_make == "sony":
+            if lens_id[:2] in ('FE', 'E '):
+                return f"Sony {lens_model}"
+            elif lens_id.lower().startswith("sony"):
+                return lens_id.capitalize()
+        elif cam_make == "canon":
+            if lens_id[:5] == "Canon":
+                return lens_id
+        
+        counter = defaultdict(int)
+        if lens_id and not lens_id.strip().startswith("Unknown"):
+            counter[lens_id] += 1
+        if lens_make and not lens_make.strip().startswith("Unknown"):
+            counter[lens_make] += 1
+        if lens_model and not lens_model.strip().startswith("Unknown"):
+            counter[lens_model] += 1
+        if lens_lens and not lens_model.strip().startswith("Unknown"):
+            counter[lens_lens] += 1
+        
+        cnt, most_voted_lens = 0, "Unknown"
+        if counter:
+            most_voted = sorted((cnt, lens) for lens, cnt in counter.items())[-1]
+            cnt, most_voted_lens = most_voted[0], most_voted[1]
+        if cnt > 1:
+            return most_voted_lens
+        if cnt == 1:
+            return lens_id if lens_id in counter else lens_make if lens_make in counter else lens_model
+        logging.warning("Unknown lens, return as is")
+        return "Unknown Lens"
+    
     def get_focal_length(self) -> str:
-        focal_length = self.get_tag_with_log(ExifTags.Base.FocalLength)
-        return f"{int(float(focal_length))}mm" if focal_length != "" else "Unknown Focal Length"
+        focal_length = self.get_tag_with_log("FocalLength").replace('.0', '', 1)
+        return focal_length if focal_length else "Unknown Focal Length"
     
     def get_focal_length_in_35mm(self) -> str:
-        focal_length_35mm = self.get_tag_with_log(ExifTags.Base.FocalLengthIn35mmFilm)
-        return f"{focal_length_35mm}mm" if focal_length_35mm != "" else "Unknown Focal Length in 35mm format"
-
+        focal_length_35mm = self.get_tag_with_log("FocalLengthIn35mmFormat").replace('.0', '', 1)
+        if not focal_length_35mm:
+            focal_length_35mm = self.get_tag_with_log("FocalLength35efl").replace('.0', '', 1)
+        return focal_length_35mm if focal_length_35mm else "Unknown Focal Length in 35mm format"
+    
     def get_aperture(self) -> str:
-        aperture = self.get_tag_with_log(ExifTags.Base.FNumber)
+        aperture = self.get_tag_with_log("Aperture")
         return f"f/{aperture}" if aperture else "Unknown Aperture"
-
+    
     def get_shutter_speed(self) -> str:
-        shutter_speed = self.get_tag_with_log(ExifTags.Base.ExposureTime)
-        return f"{self.float2frac(float(shutter_speed))}s" if shutter_speed != "" else "Unknown Shutter Speed"
-
+        shutter_speed = self.get_tag_with_log("ShutterSpeed")
+        return f"{shutter_speed}s" if shutter_speed else "Unknown Shutter Speed"
+    
     def get_iso(self) -> str:
-        iso = self.get_tag_with_log(ExifTags.Base.ISOSpeedRatings)
-        return f"ISO {iso}" if iso != "" else "Unknown ISO"
-
+        iso = self.get_tag_with_log("ISO")
+        return f"ISO {iso}" if iso else "Unknown ISO"
+    
     def get_exposure_compensation(self) -> str:
-        exposure_comp = self.get_tag_with_log(ExifTags.Base.ExposureBiasValue)
-        return f"{float(exposure_comp):.2f} EV" if exposure_comp != "" else "Unknown Exposure Compensation"
-
+        exposure_compensation = self.get_tag_with_log("ExposureCompensation")
+        return f"{exposure_compensation} EV" if exposure_compensation else "Unknown Exposure Compensation"
+    
     def get_datetime(self) -> str:
-        date_time = self.get_tag_with_log(ExifTags.Base.DateTimeOriginal)
+        date_time = self.get_tag_with_log("DateTimeOriginal")
         if date_time:
             date_time_obj = datetime.strptime(date_time, '%Y:%m:%d %H:%M:%S')
             return str(date_time_obj)
         return "Unknown DateTime Original"
     
     def get_metering_mode(self) -> str:
-        mode = self.get_tag_with_log(ExifTags.Base.MeteringMode)
-        return str(mode) if mode else "Unknown Metering Mode"
+        mode = self.get_tag_with_log("MeteringMode")
+        return mode if mode else "Unknown Metering Mode"
     
     def get_orientation(self) -> int:
-        orientation = self.get_tag_with_log(ExifTags.Base.Orientation)
-        return int(orientation) if orientation else 1
+        orientation = self.get_tag_with_log("Orientation")
+        if orientation == "Rotate 90 CW":
+            return 6
+        if orientation == "Rotate 180":
+            return 3
+        if orientation == "Rotate 270 CW":
+            return 8
+        return 1
     
     def get_image_dimensions(self) -> str:
         if self.width and self.height:
@@ -183,11 +187,11 @@ class PillowWorker(ExifWorker):
         return "Unknown Image Dimensions"
     
     def get_bits_per_sample(self) -> str:
-        bits_per_sample = self.get_tag_with_log(ExifTags.Base.BitsPerSample)
+        bits_per_sample = self.get_tag_with_log("BitsPerSample")
         return f"{bits_per_sample} bit" if bits_per_sample else "Unknown Bit"
-        
+    
     def get_author(self) -> str:
-        author = self.get_tag_with_log(ExifTags.Base.Artist)
+        author = self.get_tag_with_log("Artist")
         if not author and self.iptc and (2, 80) in self.iptc:
             author = self.iptc[(2, 80)].decode('utf-8', errors='replace')
         return author if author else "Unknown Photographer"
@@ -221,7 +225,7 @@ class PillowWorker(ExifWorker):
                 geolocator = Nominatim(user_agent="fotobot")
                 location = geolocator.reverse((lat, lon), exactly_one=True)
                 return location.address
-        
+            
         return f"{province}, {city}" 
     
     def get_keywords(self) -> str:

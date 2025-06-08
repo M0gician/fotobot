@@ -12,11 +12,11 @@ from telegram.ext import ContextTypes
 from pillow_heif import register_heif_opener
 from config import PHOTO_PATH
 
-from src.exifutils.exiftoolworker import ExifToolWorker
-from src.exifutils.pillowworker import PillowWorker
-from src.exifutils.exifworker import ExifWorker
-from src.exifutils.styles import Style, get_default_style, get_full_style, get_pretty_style
-from src.handlers.helper import remove_original_doc_from_server, reply_photo, reply_text
+from fotobot.exif.exiftoolworker import ExifToolWorker
+from fotobot.exif.pillowworker import PillowWorker
+from fotobot.exif.exifworker import ExifWorker
+from fotobot.exif.styles import Style, get_default_style, get_full_style, get_pretty_style
+from fotobot.services.helper import remove_original_doc_from_server, reply_photo, reply_text
 
 SUPPORTED_MIME_LIST = (
     "image/jpeg", "image/png", "image/heic",
