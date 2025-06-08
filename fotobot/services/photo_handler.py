@@ -12,9 +12,10 @@ from telegram.ext import ContextTypes
 from pillow_heif import register_heif_opener
 from config import PHOTO_PATH
 
-from fotobot.exif.exiftoolworker import ExifToolWorker
-from fotobot.exif.pillowworker import PillowWorker
+import os
+import fotobot.exif  # noqa: F401 - ensure workers are registered
 from fotobot.exif.exifworker import ExifWorker
+from fotobot.exif.base import get_worker as registry_get_worker
 from fotobot.exif.styles import Style, get_default_style, get_full_style, get_pretty_style
 from fotobot.services.helper import (
     remove_original_doc_from_server,
@@ -47,11 +48,13 @@ HEIF_MAPPING = {
 MAX_IMAGE_DIM = 10000
 
 def get_worker(photo_path: str) -> ExifWorker:
-    logging.info("Using Pillow backend...")
-    worker = PillowWorker(photo_path)
-    if "Unknown" in worker.get_lens():
+    """Return a worker instance based on the ``FOTOBOT_WORKER`` env var."""
+    name = os.getenv("FOTOBOT_WORKER", "pillow")
+    logging.info("Using %s backend...", name)
+    worker = registry_get_worker(name, photo_path)
+    if name == "pillow" and "Unknown" in worker.get_lens():
         logging.info("Switch to ExifTool backend...")
-        worker = ExifToolWorker(photo_path)
+        worker = registry_get_worker("exiftool", photo_path)
     return worker
 
 def get_description(worker: ExifWorker, template: str) -> str:
