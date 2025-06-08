@@ -16,7 +16,17 @@ from fotobot.exif.exiftoolworker import ExifToolWorker
 from fotobot.exif.pillowworker import PillowWorker
 from fotobot.exif.exifworker import ExifWorker
 from fotobot.exif.styles import Style, get_default_style, get_full_style, get_pretty_style
-from fotobot.services.helper import remove_original_doc_from_server, reply_photo, reply_text
+from fotobot.services.helper import (
+    remove_original_doc_from_server,
+    reply_photo,
+    reply_text,
+)
+from fotobot.services.image_service import (
+    download_file,
+    parse_metadata,
+    render_caption,
+    send_response,
+)
 
 SUPPORTED_MIME_LIST = (
     "image/jpeg", "image/png", "image/heic",
@@ -169,22 +179,15 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, styl
     orientation = None
 
     try:
-        await download_image(update, photo_path)
+        await download_file(update, photo_path)
         logging.info("Download completed from user %s", user.full_name)
 
-        logging.info("Guessing file type")
-        mimetype = get_mime(photo_path)
-        check_mime(mimetype)
-        logging.info("File MIME type: %s", mimetype)
-
         logging.info("Parsing EXIF data...")
-        worker = get_worker(photo_path)
-        template = get_template(worker, style)
+        worker, mimetype = parse_metadata(photo_path)
+        logging.info("File MIME type: %s", mimetype)
         logging.info("Output Style %s...", Style(style).name)
-        description = get_description(worker, template)
-        coordinates = get_coordinates(worker)
-        orientation = get_orientation(worker)
-        await send_msg(update, photo_path, description, parse_mode, coordinates, orientation)
+        description, coordinates, orientation = render_caption(worker, style)
+        await send_response(update, photo_path, description, coordinates, orientation)
         remove_original_doc_from_server(photo_path, logger)
     except IOError as e:
         description = "Cannot download file! (Max File Size: 20MB) Please try again."
